@@ -40,6 +40,7 @@ El modo no se reactiva automáticamente después de cerrar por completo o reinic
 ni HDMI. Para esas fuentes se está evaluando captura local con root, PicCap y HyperHDR;
 no hay compatibilidad de captura comprobada para esta unidad. Las restricciones de contenido
 protegido deben probarse por separado. Un color del fondo no acredita sincronización del video.
+El estado y las pruebas pendientes están en [Colores de YouTube y HDMI](screen-sync.md).
 
 ## Cómo se comunica
 
