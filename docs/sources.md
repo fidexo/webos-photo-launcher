@@ -50,7 +50,7 @@ pública, es una prueba hecha en la TV y así se marca en las otras docs.
 
 - Fondos locales: licencia Unsplash, https://unsplash.com/license . Autores y enlaces de cada
   foto en `assets/wallpapers/CREDITS.md`.
-- Fotos diarias (0.4, en desarrollo):
+- Fotos diarias (0.4, implementado; prueba visual en TV pendiente):
   - Categoría: https://commons.wikimedia.org/wiki/Category:Featured_pictures_of_landscapes
   - https://www.mediawiki.org/wiki/API:Categorymembers
   - https://www.mediawiki.org/wiki/API:Imageinfo
@@ -67,6 +67,8 @@ pública, es una prueba hecha en la TV y así se marca en las otras docs.
 - Manifiesto con el `appId`: https://github.com/NuvioMedia/NuvioTVSmart/blob/main/appinfo.json
 
 ## Root y reemplazo de Home (investigado, no ejecutado)
+
+Fuentes fijadas, hallazgos y límites de la revisión: [root-and-home.md](root-and-home.md).
 
 - Compatibilidad por modelo y firmware: https://cani.rootmy.tv/?q=49UN7310PSC+04.64.00
 - SlopBro: https://github.com/throwaway96/slopbro

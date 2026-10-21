@@ -108,6 +108,19 @@ después se corrigieron.
 
 Las pruebas usan dobles simulados del SDK. **No reemplazan probar en la TV.**
 
+En 0.4 la suite pasó a **77 pruebas**, todas en verde. Las fotos diarias y Transitions se verificaron
+también en Brave. Antes de cerrar la integración corregimos tres regresiones:
+
+- El puente seguía usando `contentId`: ahora envía el `contentTarget` que abrió el video en la TV.
+- Si `localStorage` dejaba leer pero rechazaba escrituras, el sorteo podía repetir el episodio:
+  ahora el último elegido en memoria tiene prioridad sobre el valor viejo guardado.
+- Si Commons respondía con un lote vacío cuando la app ya estaba oculta, podía disparar el segundo
+  pedido igualmente: ahora esa continuación espera a que la app vuelva a estar visible.
+
+Las tres fallaron antes de la corrección y pasaron después. La 0.4.0 también se empaquetó y verificó
+contra `dist/`; la TV aceptó su instalación y apertura. Falta confirmar visualmente las fotos
+diarias y abrir un episodio desde el dock. Las cuatro fotos locales siguen como respaldo.
+
 ## Puente con la TV: estado "desconocido"
 
 La app consulta `getAppLoadStatus` para saber si una app existe. Si esa consulta falla (timeout,
@@ -206,7 +219,8 @@ Este repo no redistribuye el IPK. Link al release oficial en el [tutorial](tutor
 ## Lo que decidimos no hacer
 
 - **Root.** Hay un método listado como compatible con este firmware, pero es una decisión aparte.
-  No se ejecutó. Ver [roadmap.md](roadmap.md#root-no-ejecutado).
+  El dueño lo autorizó si hace falta; no se ejecutó porque las funciones actuales no lo requieren.
+  Ver [root-and-home.md](root-and-home.md) y [roadmap.md](roadmap.md#root-no-ejecutado).
 - **Reemplazar el botón Home o arrancar solo al prender.** Sin root no hay un mecanismo
   verificado para webOS 5.
 - **Borrar apps.** Hay 13 candidatas, pero no se borró ninguna todavía.

@@ -1,18 +1,24 @@
 # Mi pantalla
 
 Inicio personalizado para LG 49UN7310PSC, webOS 5.6.2-21 / firmware 04.64.00.
-Rediseño Liquid Glass implementado por Claude Opus 5.5 high. La versión 0.3.0 (solo íconos, fondos
-fotográficos y clima) se instaló correctamente mediante Developer Mode y la TV aceptó su orden de
-apertura. Verificación local: 35 pruebas, clima real y navegación en Brave; 1920×1080 y 1280×720 sin
-desbordes. La presentación y el clima en el hardware esperan confirmación visual. No contiene root, scripts de borrado,
-reasignación de Home, modificaciones del sistema ni hooks de arranque.
+Diseño Liquid Glass y tutorial escritos con **Claude Opus 5.5 high**, con revisión e integración de
+Codex. Es una app de inicio: no reemplaza el firmware ni los menús de webOS.
+
+La **0.3** fue instalada y el dueño confirmó que le gustó en la TV. La **0.4.0** agrega una selección
+diaria de paisajes y un acceso que elige un episodio de Transitions de John Digweed al azar.
+La 0.4 pasó **77 pruebas**, compilación y verificación del IPK; se instaló y recibió su orden de
+apertura en la TV. Falta confirmar visualmente allí las fotos diarias y abrir Transitions desde el
+dock. El enlace al episodio sí se probó por CLI: apareció el selector de perfiles y después el video.
+
+Home sigue abriendo el inicio de LG. No se ejecutó root, no se instalaron hooks de arranque y no se
+borraron apps. La investigación para avanzar está en [Root y Home](docs/root-and-home.md).
 
 **Tutorial completo:** [docs/tutorial.md](docs/tutorial.md) · qué probamos y qué falló:
 [docs/what-we-tried.md](docs/what-we-tried.md) · limpieza: [docs/cleaning.md](docs/cleaning.md) ·
 roadmap: [docs/roadmap.md](docs/roadmap.md) · fuentes: [docs/sources.md](docs/sources.md).
 
-Cambios de la versión 0.4 (fotos del día de Wikimedia Commons y acceso Transitions): verificados solo
-localmente, con 75 pruebas y en Brave (1920×1080, 1280×720, 728 y 360 px). No se probaron en la TV.
+La vista previa 0.4 se verificó en Brave a 1920×1080, 1280×720, 728 y 360 px. La aceptación del
+instalador y del comando de apertura no acredita por sí sola el funcionamiento visual en hardware.
 
 ## Selección del usuario
 
@@ -58,7 +64,7 @@ explica el error. Un error de consulta sigue siendo estado desconocido y no se m
   `extmetadata`). Documentación: https://www.mediawiki.org/wiki/API:Categorymembers y
   https://www.mediawiki.org/wiki/API:Imageinfo . Sin backend, cuenta, clave ni dependencias.
 - Lo que se renueva cada día es la selección, no necesariamente las fotos: no se presentan como
-  "foto de hoy". Se usa la fecha local de la TV (America/Argentina/Buenos_Aires en esta unidad).
+  "foto de hoy". Se usa la fecha local de la TV.
 - Una consulta por día. Después de cada respuesta se guarda `continue.gcmcontinue` y `continue` tal como
   los devolvió la API, para pedir la página siguiente al día siguiente; sin continuación se vuelve a la
   primera página. Nunca se fabrica un token. Si un lote no deja ninguna foto útil se pide como máximo
@@ -110,7 +116,8 @@ explica el error. Un error de consulta sigue siendo estado desconocido y no se m
 
 `npm run build` avisa si una foto supera 2560×1440 o es JPEG progresivo: en la TV conviene
 1920×1080 baseline. Las cuatro fotos incluidas se descargaron del CDN oficial a 1920 px de ancho,
-ocupan entre 247 y 629 KB y conservan JPEG progresivo. No se descargan fotos desde la TV.
+ocupan entre 247 y 629 KB y conservan JPEG progresivo. Esas cuatro están incluidas en el paquete;
+las fotos diarias de Commons sí se descargan desde la TV.
 
 ## Clima (`weather.js`)
 
@@ -134,6 +141,10 @@ ocupan entre 247 y 629 KB y conservan JPEG progresivo. No se descargan fotos des
   con intervalos de 15 minutos; no se presentan como observación de una estación local.
 
 ## Uso local
+
+No hace falta una TV para ver el diseño. No hay dependencias npm que instalar.
+Para activar el clima, copiá `weather-config.example.js` a `weather-config.js` y completá las
+coordenadas del centro de tu ciudad. Ese archivo local está excluido de Git; el ejemplo usa `null`.
 
 ```powershell
 npm start
@@ -165,9 +176,9 @@ La vista previa nunca contacta la TV. Si existe `weather-config.js`, consulta Op
 
 ## Identificadores de aplicaciones
 
-En `config.js` se guardan los IDs candidatos. YouTube y Netflix aparecen en Connect SDK;
-Nuvio se verificó en su manifest oficial. Spotify, Disney+ y HDMI 1 deben confirmarse
-en la TV; la app consulta `getAppLoadStatus` antes de mostrar un estado confirmado.
+Los IDs de `config.js` coinciden con el inventario real por SSAP de esta TV, incluidos Spotify,
+Disney+ y HDMI 1. En otro modelo o región pueden variar; la app consulta `getAppLoadStatus` antes
+de mostrar un estado confirmado.
 Un error o falta de permisos conserva estado desconocido, no lo convierte en app ausente.
 El inventario completo de esta TV (124 apps, por SSAP y solo lectura) está resumido en
 [docs/cleaning.md](docs/cleaning.md); el JSON crudo no se publica.
@@ -177,14 +188,14 @@ El inventario completo de esta TV (124 apps, por SSAP y solo lectura) está resu
 - https://webostv.developer.lge.com/develop/references/application-manager
 - https://webostv.developer.lge.com/develop/specifications/web-api-and-web-engine
 
-## Instalación y limpieza pendientes
+## Estado de instalación y próximos pasos
 
-1. Instalación y orden de apertura de la versión 0.3.0 completadas mediante Developer Mode.
-   Falta confirmar visualmente el clima, las fotos y la apertura de los seis accesos en la TV.
+1. 0.3 confirmada visualmente por el dueño. 0.4.0 instalada y apertura aceptada mediante
+   Developer Mode; falta confirmar sus fotos diarias y Transitions desde el dock en hardware.
 2. Inventario de apps hecho ([docs/cleaning.md](docs/cleaning.md)). Falta confirmar control remoto,
    audio y reproducción.
-3. Si se desea root: revisar SlopBro para el firmware exacto y acordar la intervención
-   antes de ejecutarla. Nada en este proyecto ejecuta ese procedimiento.
+3. Root autorizado si resulta necesario, pero no ejecutado: estas funciones funcionan como una app
+   común. Se revisaron fuentes fijadas de SlopBro y Homebrew Channel; [hallazgos y límites](docs/root-and-home.md).
 4. Probar un mecanismo de Home y arranque específico para webOS 5, con desactivación
    y recuperación verificadas. Esta versión no lo incluye ni afirma que esté validado.
 5. Borrar solo las apps elegidas que LG permita desinstalar por su interfaz: Home,
@@ -221,7 +232,8 @@ de inicio una vez integrada; no reemplaza toda la interfaz del sistema operativo
 
 ## Alcance
 
-El paquete `.ipk` se generó con `@webos-tools/cli` 3.2.6 y se instaló en la TV vinculada.
+El paquete `.ipk` 0.4.0 se generó con `@webos-tools/cli` 3.2.6, se verificó contra `dist/` (33 archivos)
+y se instaló en la TV vinculada. El paquete privado y su configuración del clima no se publican.
 Esa herramienta no forma parte de la app ni es necesaria para la vista previa.
 Para volver a empaquetar tras cambiar archivos, ejecutar `npm run build` y luego
 `npm exec --yes --package=@webos-tools/cli@3.2.6 -- ares-package dist -o artifacts --no-minify`.
@@ -232,6 +244,7 @@ https://webostv.developer.lge.com/develop/guides/acg-guide .
 El runtime es HTML/CSS/JavaScript y la biblioteca oficial webOSTV.js 1.2.13 (Apache-2.0).
 No requiere Vercel, servidor propio, cuenta nueva, analytics ni servicios de pago. Conexiones externas:
 la consulta pública de clima a api.open-meteo.com y, una vez por día, la de fotos a commons.wikimedia.org
-más sus miniaturas en upload/thumb.wikimedia.org (HTTPS, sin clave). Sin conexión, el widget muestra
-"Clima no disponible", siguen las fotos locales y el resto del inicio sigue igual. Transitions solo
+más sus miniaturas en upload/thumb.wikimedia.org (HTTPS, sin clave). Sin conexión, el clima conserva
+el último dato válido con su antigüedad o muestra "Clima no disponible"; siguen las fotos locales.
+Transitions solo
 envía a la TV la orden de abrir YouTube; la app no contacta YouTube.

@@ -1,4 +1,4 @@
-// IDs candidatos; getAppLoadStatus debe confirmarlos en esta TV antes de instalar el inicio.
+// IDs confirmados por inventario SSAP en la LG de prueba; pueden variar en otros modelos o regiones.
 // logo: marca gráfica local (SVG). color: tinte de marca para el vidrio y el halo de foco.
 window.LAUNCHER_CONFIG = [
   { key: 'youtube', title: 'YouTube', appId: 'youtube.leanback.v4', logo: 'assets/logos/youtube.svg', color: '#ff1f3d', tagline: 'Videos y música', kind: 'app' },

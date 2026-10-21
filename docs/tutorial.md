@@ -18,7 +18,8 @@ Estados que vas a ver en estas docs:
 | --- | --- |
 | Verificado en la TV | Lo probamos en el televisor real y el dueño lo confirmó. |
 | Verificado en Brave | Probado en la vista previa local, en un navegador de escritorio. |
-| En desarrollo (0.4) | Código en curso; todavía no hay evidencia en el hardware. |
+| Instalación y apertura aceptadas por CLI | La TV aceptó esos comandos; falta comprobar visualmente las funciones. |
+| Implementado (0.4), pendiente en hardware | Código y pruebas listos; todavía falta la prueba visual de esas funciones en la TV. |
 
 ## 0. La TV y lo que necesitás
 
@@ -104,8 +105,8 @@ npm test
 npm run build
 ```
 
-- `npm test` corre las pruebas con el runner nativo de Node (`node --test`). En la 0.3 eran 35 y
-  pasaban todas. Usan dobles simulados: no equivalen a probar en la TV.
+- `npm test` corre **77 pruebas** con el runner nativo de Node (`node --test`), todas en verde para
+  la 0.4. Usan dobles simulados: no equivalen a probar en la TV.
 - `npm run build` copia a `dist/` solo lo que la app necesita: HTML, CSS, JS, configuración,
   íconos SVG, fotos con sus créditos y el SDK oficial `vendor/webOSTV.js` (1.2.13, Apache-2.0,
   procedencia en `vendor/SOURCE.md`). Nunca copia `node_modules`.
@@ -142,7 +143,9 @@ npm exec --yes --package=@webos-tools/cli@3.2.6 -- ares-launch --device mi-tv co
 Reemplazá `<versión>` por la de `appinfo.json`. Después de instalarla también aparece en la lista
 de apps de la TV y se abre desde ahí con el control.
 
-Estado: la **0.3** se instaló y se abrió así en la TV, y el dueño confirmó que le gustó.
+Estado: la **0.3** se instaló y se abrió así en la TV, y el dueño confirmó que le gustó. La **0.4.0**
+también fue instalada y su apertura aceptada por CLI; falta confirmar visualmente fotos diarias y
+abrir un episodio desde su dock. No confundimos la respuesta del CLI con esa prueba visual.
 
 Para desinstalar:
 
@@ -154,7 +157,8 @@ npm exec --yes --package=@webos-tools/cli@3.2.6 -- ares-install --device mi-tv -
 
 Con el control remoto: flechas para moverte, **OK** para abrir, **Atrás** (tecla 461) para volver.
 
-- El dock muestra solo íconos: YouTube, Spotify, Nuvio, Netflix, Disney+ y HDMI 1.
+- El dock muestra solo íconos: YouTube, Spotify, Nuvio, Netflix, Disney+, Transitions y HDMI 1.
+- Transitions elige uno de los episodios configurados al pulsar OK, sin repetir el anterior.
 - **Personalizar** permite ocultar, mostrar y reordenar. Se guarda en `localStorage` de la app.
   Ocultar no desinstala nada.
 - Abrir una app usa la API oficial `luna://com.webos.applicationManager/launch` a través de
@@ -169,8 +173,8 @@ Con el control remoto: flechas para moverte, **OK** para abrir, **Atrás** (tecl
 | `config.js` | Apps del dock: título, `appId`, logo y color. |
 | `weather-config.js` | Lugar del clima: nombre y coordenadas. |
 | `wallpapers.js` + `assets/wallpapers/` | Fotos de fondo locales y sus créditos. |
-| `daily-photos-config.js` | Fotos diarias de Wikimedia Commons. **En desarrollo (0.4).** |
-| `transitions-config.js` | Episodios de Transitions para el acceso a YouTube. **En desarrollo (0.4).** |
+| `daily-photos-config.js` | Fotos diarias de Wikimedia Commons. Implementado en 0.4; prueba visual en TV pendiente. |
+| `transitions-config.js` | Episodios de Transitions para el acceso a YouTube. Implementado en 0.4; prueba desde el dock en TV pendiente. |
 
 ### Apps (`config.js`)
 
@@ -210,7 +214,7 @@ npm start
 
 Abrí http://127.0.0.1:43817 en el navegador. Las flechas, Enter y Escape simulan el control.
 La vista previa **nunca contacta la TV**: abrir una app solo muestra un mensaje de demostración.
-El clima sí consulta Open-Meteo de verdad.
+Con configuración, el clima sí consulta Open-Meteo de verdad. Las fotos del día consultan Commons.
 
 Para generar dos HTML autocontenidos (útiles para compartir o revisar el diseño):
 
@@ -221,7 +225,7 @@ node scripts/preview.cjs
 - `artifacts/mi-pantalla-preview.html`: vidrio con `backdrop-filter` (navegadores modernos).
 - `artifacts/mi-pantalla-preview-tv.html`: fuerza el vidrio de respaldo que usa Chromium 68.
 
-Pesan unos 2,16 MB porque incluyen las fotos. Cualquier captura que veas en este repo de esa vista
+Pesan unos 2,19 MB porque incluyen las fotos. Cualquier captura que veas en este repo de esa vista
 es una **vista previa local**, no una foto de la TV.
 
 Probamos 1920×1080, 1280×720 y anchos chicos (728 y 360 px) en Brave, sin desbordes.
@@ -268,6 +272,6 @@ Igual que Mi pantalla, Nuvio es una app de desarrollo y desaparece si vence Deve
 
 - [what-we-tried.md](what-we-tried.md): lo que falló, lo que cambiamos y por qué.
 - [cleaning.md](cleaning.md): inventario real de la TV y cómo limpiar sin romper nada.
-- [roadmap.md](roadmap.md): 0.4 (fotos diarias y Transitions), integración con Home y lo que
-  decidimos no hacer todavía (root).
+- [roadmap.md](roadmap.md): 0.4 (fotos diarias y Transitions) e integración con Home.
+- [root-and-home.md](root-and-home.md): revisión de root y Home, todavía sin ejecutar.
 - [sources.md](sources.md): todas las fuentes.

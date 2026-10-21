@@ -12,14 +12,15 @@ las del [tutorial](tutorial.md).
 | — | Nuvio oficial 1.2.9 | Instalada, hash verificado, apertura aceptada. Sin probar login ni reproducción. |
 | — | Inventario de apps por SSAP | 124 apps leídas. Ver [cleaning.md](cleaning.md). |
 
-## 0.4: Fotos diarias + Transitions (en desarrollo)
+## 0.4: Fotos diarias + Transitions (implementado; validación visual en TV pendiente)
 
-Los manifiestos ya dicen 0.4.0, pero **la implementación está en curso y no hay evidencia en la TV
-todavía**. Lo que sigue describe el objetivo del código.
+La implementación está lista y pasó **77 pruebas**, compilación y verificación del IPK. La TV
+aceptó la instalación y la apertura de la 0.4.0; **falta comprobar visualmente las fotos diarias y
+abrir Transitions desde el dock**. El formato de enlace de YouTube ya fue verificado por CLI.
 
 ### Fotos diarias desde Wikimedia Commons
 
-Hoy los fondos son 4 fotos fijas. La 0.4 suma una selección nueva de paisajes cada día, sin
+La base son 4 fotos locales. La 0.4 suma una selección nueva de paisajes cada día, sin
 backend propio y sin credenciales.
 
 - **Fuente:** API pública de MediaWiki en Commons, categoría
@@ -29,8 +30,8 @@ backend propio y sin credenciales.
   `iiurlwidth=1920`, `formatversion=2` y **`origin=*`**, que habilita CORS sin autenticación.
 - Las miniaturas vienen de `thumb.wikimedia.org` o `upload.wikimedia.org` a 1920 px, el tamaño que la
   TV maneja bien.
-- **Seis fotos por día.** Si el primer lote no alcanza, se sigue con el token de continuación que
-  devuelve la API, con un **máximo de 2 lotes**.
+- **Hasta seis fotos por día.** Solo si el primer lote no deja ninguna foto utilizable, se pide
+  otro con el token de continuación que devuelve la API, con un **máximo de 2 lotes**.
 - Una muestra real de la respuesta trajo 45 archivos; 39 eran JPEG apaisados utilizables.
 
 **Licencias.** Solo se aceptan CC0, dominio público, CC BY y CC BY-SA, y cada foto muestra autor,
@@ -46,7 +47,7 @@ convierten a texto plano y **nunca se insertan como HTML**.
 Aclaración honesta: no está garantizado que la categoría reciba fotos nuevas todos los días. Lo que
 se renueva a diario es **la selección** de seis.
 
-Al cambiar de galería, el controlador tiene que cancelar los callbacks de la galería anterior
+Al cambiar de galería, el controlador descarta los callbacks de la galería anterior
 para que una carga vieja no pise a la nueva.
 
 Fuentes:
@@ -78,6 +79,7 @@ El formato `contentId` de Connect SDK abrió YouTube pero no el episodio. Detall
 
 - [x] `bridge.js` lanza YouTube con `contentTarget`.
 - [x] Pruebas nuevas en verde (fotos diarias y Transitions): 77 en total.
+- [x] IPK verificado, instalación y orden de apertura aceptadas en la TV.
 - [ ] Instalada en la TV; fotos diarias vistas en pantalla con sus créditos.
 - [ ] Transitions abre un episodio desde el launcher, no solo desde `ares-launch`.
 - [ ] Sin red, vuelve a las fotos locales.
@@ -96,8 +98,9 @@ https://www.lg.com/es/soporte/guias-y-soluciones/television/webos-3-5-funcion-qu
 
 ## Root (no ejecutado)
 
-Esto queda documentado como investigación, **no como instrucciones**. Rootear es una decisión
-aparte, con riesgo propio, y no la tomamos.
+Esto queda documentado como investigación, **no como instrucciones**. El dueño autorizó root si
+fuera necesario. No se ejecutó: las funciones actuales no lo requieren. La integración con Home y
+arranque exige trabajo adicional, explicado en [Root y Home](root-and-home.md).
 
 Lo que encontramos:
 
@@ -116,13 +119,13 @@ Lo que encontramos:
 - [webos-launch-home](https://github.com/gprot42/webos-launch-home#compatibility) vigila el Home y
   agrega hooks de arranque. Para webOS 5 dice "Expected working", que no es una prueba en este
   hardware.
-- Su código apunta a `com.webos.app.lounge.launcher` y a `org.webosbrew`, no a nuestra app;
+- Su código apunta a `org.webosbrew.lounge.launcher`, no a nuestra app;
   habría que adaptarlo.
 - Su [`luna.js`](https://github.com/gprot42/webos-launch-home/blob/main/src/js/luna.js) activa y
   desactiva el watcher y el arranque. Quitar solo el IPK no elimina toda la persistencia.
 
-Si algún día se hace: primero leer todo eso para el firmware exacto, tener un plan de vuelta atrás
-y aceptar el riesgo. Nada de este repo lo ejecuta ni lo prepara.
+Antes de ejecutarlo faltan adaptar y verificar la recuperación y el acceso administrativo. La
+revisión encontró defaults de Telnet y SSH que necesitan cambios; no se ejecutan desde este repo.
 
 ## Fuera de alcance
 
