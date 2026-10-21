@@ -34,13 +34,14 @@ Una consulta posterior a `listApps` confirmó que los tres IDs ya no estaban ins
 La aceptación inicial de la solicitud no fue la única comprobación.
 El inventario posterior contiene 121 apps: 104 de sistema y 17 removibles.
 
-## Preferencias aplicadas
+## Preferencias iniciales: historial 0.7.1
 
 Antes de cambiar ajustes se leyeron y guardaron sus valores en
 `artifacts/lg-cleaning-backup.private.json`, junto con los IDs, nombres y versiones de las
 tres apps retiradas. Ese respaldo es privado y no debe publicarse.
 
-Los cambios se aplicaron con `setSystemSettings`; una lectura posterior confirmó estos valores:
+Los cambios iniciales se aplicaron con `setSystemSettings`; una lectura posterior confirmó estos
+valores. Se conserva esa evidencia histórica; no representa todas las lecturas actuales:
 
 | Categoría | Clave | Valor previo guardado | Valor confirmado |
 | --- | --- | --- | --- |
@@ -51,8 +52,26 @@ Los cambios se aplicaron con `setSystemSettings`; una lectura posterior confirm�
 | `option` | `webOSPromotionVideo` | `on` | `off` |
 
 Se conservaron `option.quickStartMode: on` y `general.personalRecommend.value: off`, que ya estaban configurados así.
-Desactivar `homeAutoLaunch` afecta al Home de LG; el arranque y la reapertura de Mi pantalla
-dependen de la configuración descrita en [Root y Home](root-and-home.md).
+
+## Lectura y cambios actuales con 0.7.2
+
+`homeAutoLaunch` se leyó intermedio en `on`, se reaplicó `off` con lectura confirmada y después
+volvió a leerse `on`: **estado final `on`, sin causa aislada**. No se volvió a cambiar. El default
+Home propio sigue intacto y ambos casos físicos funcionaron con esa lectura. `homePromotion`
+sigue en `off`; `customizedAd` también se había leído en `off`. `livePlus`, `livePromotion` y
+`webOSPromotionVideo` siguen en `off`.
+`screenSaverAd` y `adCookie` pasaron de `on` a `off`, con respaldo anterior `settings-before.json`
+guardado en el host y en la TV. Los respaldos son privados y no se publican.
+
+El Home nativo ahora usa `general.defaultApps.home: com.frxn.mipantalla`, antes `com.webos.app.fullhome`;
+se conservaron los demás defaults. Esto es selección de destino, no desinstalación de Home LG.
+La 0.7.2 está instalada: verificación original del IPK con 257 pruebas, 57 archivos, 18 del servicio y 1.690.292 bytes;
+SHA-256 `61a3deb0458378b0885d65df6d64390e1f8f07b1264fe722aa21add2a22303b7`.
+El dueño confirmó en 0.7.2 Home desde YouTube y encendido tras apagar 20 s directamente en Mi
+pantalla, sin LG primero en esos dos casos. La suite posterior del repositorio pasó 269/269,
+incluidos 12 tests de una guardia externa al IPK. Esa guardia está desplegada y se comprobó a mano
+con app presente, sin Luna; su fallback en frío con app ausente no se probó físicamente.
+[Estado y reversión de Home](home-takeover.md).
 
 ## Apps conservadas
 
@@ -87,6 +106,14 @@ Para restaurar preferencias, usar los valores anteriores de
 guardadas dentro de sus categorías `general` y `option`, y comprobar después su lectura.
 En este respaldo las cinco claves tenían valor `on`. No hace falta cambiar `quickStartMode` ni
 `personalRecommend`, porque se conservaron.
+
+Los cambios de publicidad 0.7.2 se revierten usando sus valores previos en `settings-before.json`.
+El respaldo privado `native-home/settings-before.json` guardó `homeAutoLaunch: on`; si se desea
+revertir también esa preferencia, restaurar solo esa clave y comprobar su lectura.
+Para Home nativo, restaurar solo `home` dentro del `defaultApps` actual, preservando los demás
+defaults; retirar el marcador `native-home/enabled` y reiniciar solo el watcher con PID validado.
+**Revertir el default Home antes de desinstalar Mi pantalla**: si apunta a una app ausente, falla
+su apertura. El procedimiento está en [Home](home-takeover.md#desactivar-y-revertir).
 
 Las apps retiradas se reinstalan desde la tienda de LG si siguen disponibles para este modelo y
 región. El respaldo registra cuáles eran; no contiene paquetes ni garantiza recuperar sesiones

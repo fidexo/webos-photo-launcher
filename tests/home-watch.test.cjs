@@ -60,13 +60,43 @@ function harness(args, initial = {}) {
 test('CLI validates modes and unsigned 16-bit HOME codes', () => {
   const parse = load().parseArgs;
   assert.deepEqual(parse(['--boot','--watch','--dry-run','--home-code=102']),
-    {boot:true, watch:true, dryRun:true, homeCode:102, pollMs:100, help:false});
+    {boot:true, watch:true, nativeHome:false, dryRun:true, homeCode:102, pollMs:100, help:false});
   assert.equal(parse(['--help']).help, true);
   assert.equal(parse(['--watch']).homeCode, 773);
   for (const args of [[], ['--dry-run'], ['--oops'], ['--watch','--home-code=-1'],
     ['--watch','--home-code=65536'], ['--watch','--home-code=1.5'], ['--watch','--home-code=1;id']]) {
     assert.throws(() => parse(args));
   }
+});
+
+test('native Home is opt-in, requires watch, and supports boot plus watch', () => {
+  const parse=load().parseArgs; let config;
+  assert.equal(parse(['--watch']).nativeHome,false);
+  assert.doesNotThrow(()=>{config=parse(['--watch','--native-home']);});
+  assert.equal(config.nativeHome,true);
+  assert.doesNotThrow(()=>{config=parse(['--boot','--watch','--native-home']);});
+  assert.equal(config.boot,true); assert.equal(config.watch,true); assert.equal(config.nativeHome,true);
+  for (const args of [['--native-home'],['--boot','--native-home']]) assert.throws(()=>parse(args), /requires --watch/);
+});
+
+test('CLI help documents native Home and exits before starting a daemon', () => {
+  const {spawnSync}=require('node:child_process');
+  const result=spawnSync(process.execPath,[require.resolve(file),'--native-home','--help'],{encoding:'utf8'});
+  assert.equal(result.status,0); assert.match(result.stdout,/--native-home/);
+  assert.match(result.stdout,/requires --watch/); assert.equal(result.stderr,'');
+  assert.equal(load().parseArgs(['--native-home','--help']).nativeHome,false);
+});
+
+test('native Home skips all input opens and polling while preserving power wake and heartbeat fallback', () => {
+  const h=harness(['--watch']); h.names.push('event0','event1');
+  const daemon=load().createDaemon(Object.assign(load().parseArgs(['--watch']),{nativeHome:true}),h.deps);
+  assert.equal(h.flags.length,0); assert.equal(h.power.starts,1);
+  assert.deepEqual([...h.timers.values()].map(t=>t.interval),[1000]);
+  h.power.ready(true); h.queues.set('event0',[event()]); h.advance(5000);
+  assert.equal(h.flags.length,0); assert.equal(h.calls.length,0);
+  h.power.wake(); assert.equal(h.calls.length,1); h.reply(0,'{"returnValue":true}');
+  h.power.ready(false); h.jump(15000); h.advance(1000); assert.equal(h.calls.length,2);
+  daemon.stop(); assert.equal(h.power.stops,1); assert.equal(h.closed.length,0); assert.equal(h.timers.size,0);
 });
 
 test('CLI and autostart both default to 100ms input polling without an override', () => {

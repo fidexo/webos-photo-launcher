@@ -20,10 +20,11 @@ var BOOT_MAX = 30;
 var WAKE_RETRY_MS = 1500;
 var WAKE_MAX = 4;
 var HELP = [
-  'Usage: node home-watch.js --boot --watch [--dry-run] [--home-code=773] [--poll-ms=100]',
+  'Usage: node home-watch.js --boot --watch [--native-home] [--dry-run] [--home-code=773] [--poll-ms=100]',
   '',
   '  --boot             launch Mi pantalla while the app manager starts',
   '  --watch            reopen Mi pantalla when Home is pressed',
+  '  --native-home      keep power/wake watching without input polling (requires --watch)',
   '  --dry-run          log actions without running luna-send',
   '  --home-code=N      Linux input code for Home (default 773)',
   '  --poll-ms=N        input polling interval in milliseconds (default 100)',
@@ -33,15 +34,17 @@ var HELP = [
 function parseArgs(argv) {
   if (!Array.isArray(argv)) argv = [];
   if (argv.indexOf('--help') !== -1 || argv.indexOf('-h') !== -1) {
-    return {boot: false, watch: false, dryRun: false, homeCode: DEFAULT_HOME_CODE, pollMs: POLL_MS, help: true};
+    return {boot: false, watch: false, nativeHome: false, dryRun: false, homeCode: DEFAULT_HOME_CODE, pollMs: POLL_MS, help: true};
   }
-  var config = {boot: false, watch: false, dryRun: false, homeCode: DEFAULT_HOME_CODE, pollMs: POLL_MS, help: false};
+  var config = {boot: false, watch: false, nativeHome: false, dryRun: false, homeCode: DEFAULT_HOME_CODE, pollMs: POLL_MS, help: false};
   for (var i = 0; i < argv.length; i += 1) {
     var arg = argv[i];
     if (arg === '--boot') {
       config.boot = true;
     } else if (arg === '--watch') {
       config.watch = true;
+    } else if (arg === '--native-home') {
+      config.nativeHome = true;
     } else if (arg === '--dry-run') {
       config.dryRun = true;
     } else if (arg.indexOf('--home-code=') === 0) {
@@ -60,6 +63,7 @@ function parseArgs(argv) {
       throw new Error('Unknown argument: ' + arg);
     }
   }
+  if (config.nativeHome && !config.watch) throw new Error('--native-home requires --watch.');
   if (!config.boot && !config.watch) throw new Error('Use --boot and/or --watch.');
   return config;
 }
@@ -409,10 +413,14 @@ function createDaemon(rawConfig, rawDeps) {
   if (config.boot) boot();
   if (config.watch) {
     if (!config.dryRun) powerMonitor = watchPower(wake);
-    discover();
-    log('watch: opened ' + devices.length + ' input devices');
-    every(poll, pollMs);
-    every(discover, DISCOVER_MS);
+    if (!config.nativeHome) {
+      discover();
+      log('watch: opened ' + devices.length + ' input devices');
+      every(poll, pollMs);
+      every(discover, DISCOVER_MS);
+    } else {
+      log('watch: native Home; input polling disabled');
+    }
     every(heartbeat, HEARTBEAT_MS);
   }
 

@@ -41,11 +41,23 @@ un salto de reloj. La 0.7.1 agrega una suscripción al estado real de energía. 
 de estado no activo a `Active` solicita la apertura; el primer estado recibido solo establece
 la referencia. Reconecta si falla el servicio y conserva el salto de reloj como respaldo.
 
-Se desactivó `general.homeAutoLaunch` para que LG no solicite su Home al encender. El hook de
+En la limpieza anterior se desactivó `general.homeAutoLaunch`; en la lectura posterior de la
+0.7.2 volvió a aparecer `on`. Se volvió a dejar en `off` y se comprobó la lectura, pero tras las
+pruebas del usuario apareció nuevamente en `on`. No se aisló la causa ni se acredita que `off`
+persista. El destino `defaultApps.home` sí conservó Mi pantalla. El hook de
 Mi pantalla sigue necesitando que webOS y su administrador de aplicaciones estén disponibles:
 no reemplaza la pantalla de arranque del firmware. El dueño confirmó en 0.7.1 que, después de
 apagar con el control durante 20 segundos y encender, Mi pantalla abre sola; también confirmó
 que Home desde YouTube vuelve a Mi pantalla. No se midió la cantidad de cuadros de HDMI que
 puedan aparecer antes de cargar la app. Más detalle en [Home](home-takeover.md).
 
-Las tres apps LG retiradas, los cinco ajustes y su recuperación están en [Limpieza](cleaning.md).
+La 0.7.2 configura `general.defaultApps.home` para que el compositor abra Mi pantalla directamente
+al soltar Home. Con `--native-home`, el watcher conserva arranque y potencia, pero deja de abrir
+dispositivos de entrada y de revisarlos cada 100 ms. La prueba automática desde YouTube volvió
+a Mi pantalla sin una nueva detección del watcher. El dueño confirmó después que Home desde
+YouTube va directo a Mi pantalla y que apagar 20 s con el control y encender también abre Mi
+pantalla directamente. Son confirmaciones de esos casos: no se midió la latencia ni se revalidó
+un arranque en frío con esta configuración.
+
+Las tres apps LG retiradas, los ajustes publicitarios adicionales y su recuperación están en
+[Limpieza](cleaning.md).

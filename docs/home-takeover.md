@@ -1,4 +1,4 @@
-# Home e inicio automático: fase 1
+# Home nativo e inicio automático
 
 Implementación para LG webOS 5.6.2 y `com.frxn.mipantalla`. Estado al 2026-10-21: **arranque
 automático y watcher verificados en la TV, incluido un arranque en frío**. El dueño confirmó que
@@ -6,6 +6,10 @@ pulsar Home abre Mi pantalla; falta revalidar foco y Home repetido/mantenido en 
 La 0.7.0 quedó instalada y el dueño confirmó buena navegación. Al apagar 20 s con el control y
 encender, **Mi pantalla no abrió sola**. En 0.7.1 el dueño confirmó físicamente que **ahora abre sola**
 en ese caso y que, desde YouTube, Home termina **en Mi pantalla tras esperar 2 s**.
+La versión actual es **0.7.2**, instalada con Home nativo. HOME por entrada de red desde YouTube
+terminó en nuestra app, sin un nuevo `home: detected`; esa prueba solo acredita destino. Después
+el dueño confirmó **Home físico desde YouTube y encendido tras apagar 20 s directamente en Mi
+pantalla, sin LG primero en esos dos casos**. No se extiende a cold boot nuevo, foco o repetición.
 
 ## Estado verificado
 
@@ -29,6 +33,8 @@ en ese caso y que, desde YouTube, Home termina **en Mi pantalla tras esperar 2 s
 - IPK **0.7.1**: **254 pruebas**, **57 archivos**, **18 del servicio**, instalación CLI aceptada.
   Watcher PID `13691` con `boot: accepted`; su hijo `luna-send` suscrito a `getPowerState` es esperado.
   SHA-256: `1331e3b7f0684125708544489cab9c0171bf6030421c8250f2b6c5593289045b`.
+- IPK **0.7.2** instalado: **257 pruebas**, **57 archivos**, **18 del servicio**, **1.690.292 bytes**.
+  SHA-256: `61a3deb0458378b0885d65df6d64390e1f8f07b1264fe722aa21add2a22303b7`.
 
 La navegación 0.7.0 se midió por CDP en esta TV real, Chromium 68 a 1920×1080, con flechas cada
 120 ms durante 3,5 s: 209 intervalos, media 16,7457 ms, p95 16,666 ms, máximo 33,332 ms y uno
@@ -45,6 +51,26 @@ desde YouTube con destino final Mi pantalla tras 2 s. No acredita ausencia de un
 del Home de LG. El ACK de boot por sí solo no prueba app visible.
 Las preferencias de promociones/Home y las tres apps LG retiradas constan en [limpieza](cleaning.md).
 
+## Home nativo: configuración 0.7.2
+
+`general.defaultApps.home` cambió de `com.webos.app.fullhome` a `com.frxn.mipantalla`, preservando las demás
+entradas de `defaultApps`. La metadata de esta TV usa `valueCheck: false`; se revisaron la
+suscripción del compositor en `StarfishViewStateController.qml:74`, `StarfishKeyFilter.qml:782` y
+`systemUi.js` (`launchHomeApp`). Es evidencia del mecanismo en esta TV, no garantía entre modelos.
+`homeAutoLaunch` se reaplicó en `off` y se confirmó por lectura; después volvió a leerse `on`.
+El estado final es `on`, sin causa aislada; el default Home propio sigue intacto y ambos casos
+físicos funcionaron con esa lectura. No se sigue cambiando esa preferencia.
+El marcador `/var/lib/mipantalla-maintenance/native-home/enabled` activa `--native-home` en el
+watcher: omite discovery, descriptores y polling de input; conserva boot, potencia y wake.
+El modo de input anterior sigue siendo fallback y usa 100 ms por defecto, pero no está activo
+con ese marcador. El hijo `luna-send` de potencia es esperado y no es otro watcher.
+
+La prueba de HOME enviada por entrada de red desde YouTube terminó en `com.frxn.mipantalla`
+sin un nuevo log `home: detected`. La observación de primer plano solo prueba destino final;
+no mide latencia ni descarta una aparición del Home de LG. Las confirmaciones físicas de 0.7.1
+son históricas. En 0.7.2 el dueño confirmó Home desde YouTube y encendido tras apagar 20 s
+directos a Mi pantalla, sin LG primero en esos casos. No se midió latencia ni se validaron otros ciclos.
+
 ## Arquitectura
 
 Los cuatro archivos de Home se empaquetan junto al servicio de luces, pero el watcher es un proceso root
@@ -59,6 +85,7 @@ comportamiento del servicio de luces.
   Aplica debounce de 800 ms y vuelve a buscar
   dispositivos cada segundo. Cada apertura usa `luna-send -n 1 -f` y un argumento JSON separado
   hacia `luna://com.webos.applicationManager/launch`.
+  Con `--native-home`, no ejecuta esas aperturas, polling ni discovery; requiere `--watch`.
 - `home-power.js` (84 líneas) ejecuta `luna-send -i` al URI fijo
   `luna://com.webos.service.tvpower/power/getPowerState` con `{"subscribe":true}`. El primer
   `Active` fija la base; no activo → `Active` solicita wake una vez, ignorando duplicados.
@@ -78,7 +105,7 @@ comportamiento del servicio de luces.
 - `home-autostart.sh` se ejecuta mediante el symlink de HBC. Comprueba los archivos, valida el
   proceso del PID anterior y evita iniciar un duplicado. Exporta
   `NODE_PATH=/usr/lib/node_modules:/usr/lib/nodejs` y ejecuta
-  `nohup /usr/bin/node home-watch.js --boot --watch`.
+  `nohup /usr/bin/node home-watch.js --boot --watch`, agregando `--native-home` si está el marcador.
 
 El PID está en `/tmp/mipantalla-home.pid`; el log está acotado a 64 KiB en
 `/tmp/mipantalla-home.log`. SIGTERM y SIGINT cierran descriptores, temporizadores y el PID propio.
@@ -95,10 +122,10 @@ Luna, elevación ni ajustes de eARC.
 - Root y Homebrew Channel con startup elevado y persistente que ejecute `init.d`.
 - SSH root operativo como vía de recuperación y acceso físico al control remoto.
 - IPK de esta compilación instalado, con los cuatro archivos de Home en el directorio del servicio.
-- `/usr/bin/node`, `luna-send`, `nohup` y acceso root a los dispositivos de entrada.
+- `/usr/bin/node`, `luna-send` y `nohup`; acceso a input solo para el fallback anterior.
 
-En esta TV los requisitos están cubiertos. No se cambian particiones del sistema, roles Luna,
-actividades de HBC ni ajustes de otras apps.
+En esta TV los requisitos están cubiertos. No se cambian particiones, roles Luna ni actividades
+de HBC. La preferencia de destino Home aplicada en 0.7.2 está documentada arriba.
 
 ## Comprobación local y empaquetado
 
@@ -112,13 +139,15 @@ python scripts/verify_package.py
 ```
 
 El verificador compara los archivos del IPK con `dist/` y el directorio del servicio e informa
-el conteo real y el SHA-256. Para 0.7.1: 254 pruebas, 57 archivos y 18 del servicio.
+el conteo real y el SHA-256. La verificación original del IPK 0.7.2 tuvo 257 pruebas, 57 archivos,
+18 del servicio y 1.690.292 bytes. La suite posterior del repositorio pasó 269/269, con 12 tests
+de la guardia externa al IPK; el paquete mantiene 57 archivos y 18 del servicio.
 Las pruebas con buffers y dobles locales no validan los dispositivos de entrada, permisos Luna,
 foco, arranque ni standby de la TV.
 
 ## Instalación y activación
 
-El IPK 0.7.1 ya está instalado; root, HBC y el hook ya estaban operativos. No hay que repetir su
+El IPK 0.7.2 ya está instalado; root, HBC y el hook ya estaban operativos. No hay que repetir su
 instalación para comprobar esta versión. Como referencia de recuperación, se puede usar el instalador de
 Developer Mode o `luna-send` en la TV. Si `/dev/install` responde
 `Unknown method "install" for category "/dev"`, reiniciar el instalador después de habilitar
@@ -168,6 +197,9 @@ controlada del proceso anterior.
 
 En 0.7.1 el dueño confirmó YouTube → Home → Mi pantalla tras esperar 2 s. Esta guía sirve para
 comprobar foco, repetición y regreso desde otras apps; esos casos adicionales siguen pendientes.
+Los comandos de input siguientes documentan el fallback anterior; no corresponden al Home nativo
+activo en 0.7.2. Home físico desde YouTube y encendido tras apagar 20 s quedaron confirmados
+directos a Mi pantalla, sin LG primero en esos dos casos.
 
 Primero observar HOME sin abrir apps. Ejecutar en una sesión SSH root:
 
@@ -238,17 +270,44 @@ hay que adaptar y probar el parser a la ABI real.
 Con acceso de recuperación disponible, comprobar por separado:
 
 1. Apagado completo y encendido físico: HBC debe arrancar y Mi pantalla debe abrirse cuando el
-   app manager esté disponible. **Verificado previamente con 0.6.0; no revalidado en frío con 0.7.1.**
+   app manager esté disponible. **Verificado previamente con 0.6.0; no revalidado en frío con 0.7.2.**
 2. Standby de más de 10 s y vuelta con el control: comprobar las aperturas de wake y el foco.
-   **Falló con 0.7.0; el dueño confirmó que 0.7.1 abre sola tras apagar 20 s con el control y encender.**
+   **Falló con 0.7.0; en 0.7.2 el dueño confirmó Mi pantalla directamente tras apagar 20 s y encender.**
 3. Standby corto y Quick Start+: documentar qué caso realmente suspende el proceso; un heartbeat
    que sigue ejecutándose no detectará el despertar mediante el gap. **Pendiente.**
 4. Home desde apps distintas, navegación posterior y ausencia de watchers duplicados.
-   **En 0.7.1 YouTube → Home termina en Mi pantalla tras 2 s; foco, repetición y otras apps pendientes.**
+   **En 0.7.2 YouTube → Home va directo a Mi pantalla, sin LG primero; foco, repetición y otras apps pendientes.**
+
+## Guardia externa de recuperación
+
+La guardia Node 8/ES5 está desplegada fuera del IPK en
+`/var/lib/mipantalla-maintenance/native-home/native-home-guard.js`; la evalúa
+`/var/lib/webosbrew/init.d/59-mipantalla-home-guard`. El código está en
+[`scripts/tv/native-home-guard.js`](../scripts/tv/native-home-guard.js).
+Se confirmaron `node --check` con Node 8, `sh -n`, el hash y la ejecución manual con
+estado `app-present`, sin llamada Luna. SHA-256:
+`14d2e0767a6a20397e6c40bb593ae26336736bd1519a060ef198a6d51a74da2e`.
+Con la app ausente, restaura solo el Home anterior preservando el mapa actual; exige lectura
+confirmada antes de retirar el marcador. Ante respaldo corrupto, symlink o estado incierto no actúa.
+Sus 12 tests están incluidos en los 269/269 del repositorio, fuera de los 257 originales del IPK.
+**El fallback en arranque en frío con la app ausente no se probó físicamente.** La recuperación
+SSH manual sigue disponible si falla; no se considera validado el guard durante boot por ejecutar su entrypoint a mano.
 
 ## Desactivar y revertir
 
-Primero retirar **solo nuestro symlink**, comprobando su destino. Luego validar el PID antes de
+**Antes de desinstalar Mi pantalla, restaurar el destino Home anterior.** Si el default apunta a
+una app ausente, su apertura falla. Leer `defaultApps` actual, cambiar únicamente su clave `home`
+al valor anterior del respaldo `settings-before.json` (`com.webos.app.fullhome`) y guardar preservando todos los
+demás defaults; comprobar la lectura. El respaldo está guardado de forma privada en host y TV.
+Si se revierte también `homeAutoLaunch`, su valor previo en `native-home/settings-before.json`
+es `on`; restaurar solo esa clave y comprobar la lectura.
+Retirar `/var/lib/mipantalla-maintenance/native-home/enabled` y reiniciar solo el watcher con PID
+validado y un único proceso. No reemplazar todo `defaultApps` por una copia antigua.
+Para retirar también la guardia, comprobar el contenido del hook propio
+`/var/lib/webosbrew/init.d/59-mipantalla-home-guard` y quitar ese archivo y su script externo;
+conservar el respaldo privado hasta comprobar Home y el encendido originales.
+
+Para desactivar además el hook, retirar **solo nuestro symlink**, comprobando su destino. Luego validar el PID antes de
 enviar TERM. Ejecutar en la sesión root de la TV:
 
 ```sh
@@ -277,7 +336,7 @@ ls -l /tmp/mipantalla-home.pid
 tail -n 20 /tmp/mipantalla-home.log
 ```
 
-Con el proceso terminado y el symlink retirado, Home vuelve a depender del comportamiento
+Con el default Home restaurado, el proceso terminado y el symlink retirado, Home vuelve a depender del comportamiento
 original de LG; comprobarlo físicamente. El daemon retira su PID al cerrar limpiamente.
 Si persiste, inspeccionar el proceso antes de otra acción. No usar `killall node`.
 El log se puede conservar como evidencia. Desinstalar el IPK por sí solo no retira el hook ni
@@ -285,14 +344,15 @@ garantiza que termine un watcher ya iniciado: hacer primero este rollback.
 
 ## Riesgos y límites pendientes
 
-- Sin `grab`, LG también recibe Home. Puede aparecer brevemente su Home o recuperar el foco
-  después de nuestra apertura. La fase 1 no cierra ni modifica el Home de LG.
+- En el fallback de input sin `grab`, LG también recibe Home. La 0.7.2 usa destino nativo, pero
+  la prueba de primer plano no demuestra ausencia de una aparición inicial de LG ni latencia.
 - Home tiene confirmación física previa; foco y repetición necesitan revalidación actual.
   Standby falló tras apagar 20 s con el control en 0.7.0 y ese caso quedó confirmado en 0.7.1,
   igual que Home desde YouTube tras 2 s. Otros ciclos y la desinstalación completa no se probaron.
+  En 0.7.2 ambos casos físicos van directos a Mi pantalla, sin LG primero; no acredita otros ciclos.
 - Wake reintenta hasta cuatro veces solo tras fallo y cancela al recibir aceptación. Un ajuste
   del reloj o una pausa larga también puede simular un wake; con CPU activa puede no haber gap.
-- El polling de 9 dispositivos cada 100 ms consumió alrededor de 4,4 % de CPU en reposo en esta
+- El polling anterior de 9 dispositivos cada 100 ms consumió alrededor de 4,4 % de CPU en reposo en esta
   TV, con 60,29 FPS para la app. Medir de nuevo si se agregan más dispositivos o se baja el
   intervalo.
 - Root/HBC persistentes, Developer Mode, reinstalaciones o actualizaciones pueden cambiar rutas

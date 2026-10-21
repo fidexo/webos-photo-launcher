@@ -15,14 +15,31 @@ las del [tutorial](tutorial.md).
 | 0.6.0 | Revisar captura, transporte HyperHDR local, Pantalla completa y fase 1 de Home. | 234 pruebas aprobadas; IPK verificado de 56 archivos, 17 del servicio. Root, PicCap y HyperHDR reales; activación física de las seis lámparas y restauración al volver a Manual. El arranque en frío ejecutó el hook de Home y abrió Mi pantalla; el dueño confirmó después la tecla Home. Foco, repetición, standby, HDMI, contenido protegido y persistencia de Pantalla completa pendientes. |
 | 0.7.0 | Halos de pantalla completa y foco optimizados solo para TV; correcciones del watcher. | 243 pruebas aprobadas; IPK de 56 archivos, 17 del servicio, instalado y abierto por `ares-launch`; watcher con `boot: accepted`. Navegación confirmada por el dueño. El encendido tras apagar 20 s con el control falló; 0.7.1 corrigió ese caso y el dueño lo confirmó después. |
 | 0.7.1 | Monitor LS2 de potencia para Quick Start y diagnóstico de Home. | 254 pruebas aprobadas; IPK verificado de 57 archivos, 18 del servicio, instalado por CLI. Watcher PID 13691 con `boot: accepted` y monitor `luna-send` esperado. El dueño confirmó encendido tras apagar 20 s con el control y YouTube → Home → Mi pantalla tras esperar 2 s. |
+| 0.7.2 | Home nativo y watcher sin polling de input. | Instalada; verificación original del IPK: 257 pruebas, 57 archivos, 18 del servicio y 1.690.292 bytes. Suite posterior: 269/269 con 12 tests de guardia externa al IPK. El usuario confirmó Home desde YouTube y encendido tras apagar 20 s directos a Mi pantalla, sin LG primero en esos casos. |
 | — | Nuvio oficial 1.2.9 | Instalada, hash verificado, apertura aceptada. Sin probar login ni reproducción. |
-| — | Inventario y limpieza acotada | Inventario previo de 124 apps; tres apps removibles de LG retiradas y cinco preferencias en `off`, con lectura posterior. Diez candidatas de terceros conservadas. Ver [cleaning.md](cleaning.md). |
+| — | Inventario y limpieza acotada | Inventario previo de 124 apps, posterior de 121; tres apps LG ausentes. `homeAutoLaunch` se reaplicó `off` con lectura confirmada y después volvió a leerse `on`: estado final `on`, sin causa aislada. El default Home propio y los demás ajustes verificados siguen intactos. Diez candidatas de terceros conservadas. Ver [cleaning.md](cleaning.md). |
 
 El uso, los modos y sus límites están en [Luces WiZ](lights.md). HDMI y contenido protegido siguen
 pendientes. El dueño confirmó previamente que Home abre Mi pantalla; falta revalidar foco y uso
 repetido en la versión actual. El arranque en frío anterior se verificó; el caso de 20 s con el
 control falló en 0.7.0 y quedó confirmado físicamente en 0.7.1. En esta última el dueño también
 confirmó que Home desde YouTube termina en Mi pantalla tras esperar 2 s.
+
+## 0.7.2: Home nativo
+
+En esta TV, `general.defaultApps.home` pasó de `com.webos.app.fullhome` a `com.frxn.mipantalla`, preservando los
+demás defaults. La metadata permite ese valor (`valueCheck: false`); el compositor consulta la
+preferencia para abrir Home. El marcador `/var/lib/mipantalla-maintenance/native-home/enabled`
+activa `--native-home`: sin input ni polling/discovery, conservando boot y power/wake.
+Se reaplicó `homeAutoLaunch: off` con lectura confirmada; después volvió a leerse `on`, estado
+final sin causa aislada. El default Home propio sigue intacto y ambos casos físicos funcionaron así.
+El usuario confirmó Home desde YouTube y encendido tras apagar 20 s directos a Mi pantalla,
+sin LG primero en esos dos casos; no acredita cold boot nuevo, foco, repetición u otros ciclos.
+La guardia externa está desplegada y su entrypoint manual confirmó app presente sin Luna;
+el fallback en frío con la app ausente sigue sin prueba física. Antes de desinstalar hay que revertir solo el default Home y retirar el
+marcador. [Mecanismo, límites y recuperación](home-takeover.md).
+SHA-256 del IPK 0.7.2:
+`61a3deb0458378b0885d65df6d64390e1f8f07b1264fe722aa21add2a22303b7`.
 
 ## 0.7.1: Quick Start con eventos de potencia
 

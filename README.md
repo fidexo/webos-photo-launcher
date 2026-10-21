@@ -14,6 +14,10 @@ El dueño confirmó físicamente en 0.7.1 que Home desde YouTube termina en Mi p
 2 s, y que apagar con el control 20 s y encender vuelve a abrirla sola. Root y HBC
 quedaron persistentes y se instaló el hook de arranque de la fase 1: en un arranque en frío HBC
 ejecutó el watcher y Mi pantalla abrió en primer plano. Faltan el foco, la repetición y otros ciclos de standby.
+La versión actual **0.7.2** usa Home nativo con `general.defaultApps.home: com.frxn.mipantalla`;
+el watcher conserva boot y power/wake, sin polling de input. La prueba de HOME por entrada de red
+terminó en Mi pantalla. El dueño confirmó después Home físico desde YouTube y encendido
+tras apagar 20 s directamente en Mi pantalla, sin Home de LG primero en esos dos casos.
 Se retiraron tres apps removibles de LG y se desactivaron cinco preferencias de promociones/Home;
 los cambios se comprobaron con lecturas posteriores. [Detalle y reversión](docs/cleaning.md).
 La investigación y las condiciones están en [Root y Home](docs/root-and-home.md)
@@ -76,6 +80,19 @@ El dueño confirmó físicamente en **0.7.1**: tras apagar 20 s con el control, 
 desde **YouTube → Home**, tras esperar 2 s, termina **en Mi pantalla**. Esto no acredita otros
 ciclos de standby ni ausencia de una aparición inicial del Home de LG. El watcher registra
 `home: accepted` o `home: rejected`. La navegación fluida confirmada es la de 0.7.
+
+**0.7.2:** instalada; **257 pruebas**, **57 archivos**, **18 del servicio**, **1.690.292 bytes**.
+Home nativo cambia solo `general.defaultApps.home` de `com.webos.app.fullhome` a `com.frxn.mipantalla`.
+Se reaplicó `homeAutoLaunch: off` con lectura confirmada, pero una lectura posterior volvió a
+mostrar `on`: estado final sin causa aislada. Home nativo sigue intacto y los dos casos físicos funcionaron así.
+El marcador `/var/lib/mipantalla-maintenance/native-home/enabled` activa `--native-home`: conserva
+boot y power/wake y omite abrir input, su polling y discovery. HOME enviado por entrada de red
+desde YouTube terminó en nuestra app sin un nuevo `home: detected`; solo acredita destino final,
+no ausencia de Home LG ni latencia. Después, **el usuario confirmó ambos casos físicos directos**:
+Home desde YouTube y encendido tras apagar 20 s, sin LG primero en esas observaciones. Antes de
+desinstalar, restaurar el Home anterior preservando los demás defaults. [Detalle y reversión](docs/home-takeover.md).
+La suite actual del repositorio pasó **269/269**, incluidos 12 tests de la guardia externa al IPK;
+las 257 pruebas anteriores corresponden a la verificación original del paquete.
 
 ## Selección del usuario
 
@@ -253,18 +270,20 @@ root con `listApps`) está resumido en
    Developer Mode; falta confirmar sus fotos diarias y Transitions desde el dock en hardware.
 2. Inventario de apps hecho ([docs/cleaning.md](docs/cleaning.md)). Falta confirmar control remoto,
    audio y reproducción.
-3. 0.7.1 instalada, con watcher y monitor de potencia activos; encendido tras 20 s confirmado físicamente.
+3. 0.7.2 instalada, con Home nativo y watcher sin polling de input; ambos casos físicos confirmados.
    La navegación de 0.7 fue confirmada por el dueño.
    Root, HBC, PicCap y HyperHDR ya estaban operativos; en 0.6.0 Pantalla completa encendió
    las seis lámparas y Manual las restauró. La primera parada pidió reintentar. El arranque en
    frío ejecutó el hook de Home y abrió Mi pantalla. HDMI, contenido protegido y persistencia de
    Pantalla completa tras reinicio siguen pendientes.
-4. Home: la fase 1 está instalada, el arranque automático se verificó en frío y el dueño confirmó
-   que en 0.7.1 Home desde YouTube termina en Mi pantalla tras 2 s. El encendido después de
-   apagar 20 s con el control también quedó confirmado; en 0.7.0 había fallado. Foco posterior,
-   Home repetido/mantenido y otros ciclos de standby siguen sin comprobación específica.
+4. Home: el arranque en frío histórico y las pruebas físicas 0.7.1 siguen como evidencia anterior.
+   En 0.7.2 el usuario confirmó Home desde YouTube y encendido tras apagar 20 s directamente
+   en Mi pantalla, sin LG primero en esos casos. Foco, repetición y otros ciclos siguen sin prueba específica.
 5. Limpieza aplicada y verificada: LG Streaming Week, LG Sports Playbook y LG Channels retiradas;
-   cinco preferencias de promociones/Home en `off`. Diez candidatas de terceros siguen instaladas.
+   cinco preferencias inicialmente confirmadas en `off`. `homeAutoLaunch` se leyó después en `on`,
+   sin causa atribuida, se volvió a poner en `off` con lectura fresca y después volvió a leerse `on`:
+   estado final sin causa aislada. `screenSaverAd` y `adCookie` siguen en `off`.
+   Diez candidatas de terceros siguen instaladas.
    No se tocaron otras apps ni servicios del sistema. [Respaldo y reversión](docs/cleaning.md).
 
 Nuvio oficial 1.2.9 también se instaló y recibió su orden de apertura. El paquete se verificó contra
@@ -272,10 +291,10 @@ el SHA-256 publicado `895d3e7a884c9fed8162b2a3af96f9ae502a83b33956715ffcbac02ef7
 Esto confirma instalación, no inicio de sesión ni reproducción.
 Fuente: https://github.com/NuvioMedia/NuvioTVSmart/releases/tag/1.2.9 .
 
-El listado de Developer Mode confirma `com.frxn.mipantalla` y `space.nuvio.webos`; no representa
-un inventario completo de las apps de tienda ni del sistema. La limpieza realizada está documentada
-en [cleaning.md](docs/cleaning.md). Home Auto Launch controla el Home de LG, no el arranque de nuestra
-app. Desinstalar puede liberar espacio, sin garantía de más fluidez, RAM o FPS.
+El listado anterior de Developer Mode confirmó `com.frxn.mipantalla` y `space.nuvio.webos`;
+el inventario actual no muestra Nuvio. El estado actual y la limpieza están documentados
+en [cleaning.md](docs/cleaning.md). La 0.7.2 selecciona el destino nativo mediante `defaultApps.home`;
+boot y power/wake siguen a cargo del watcher. Desinstalar puede liberar espacio, sin garantía de más fluidez, RAM o FPS.
 Mantener Developer Mode vigente con EXTEND: al desactivarse se eliminan las apps de desarrollo.
 Guía: https://webostv.developer.lge.com/develop/getting-started/developer-mode-app .
 
@@ -296,16 +315,21 @@ de inicio una vez integrada; no reemplaza toda la interfaz del sistema operativo
 
 ## Alcance
 
-El paquete `.ipk` 0.7.1 se generó con `@webos-tools/cli` 3.2.6 y se verificó contra `dist/` y el
-servicio WiZ: 57 archivos, incluidos 18 del servicio; 254 pruebas aprobadas. SHA-256:
-`1331e3b7f0684125708544489cab9c0171bf6030421c8250f2b6c5593289045b`. El CLI aceptó su
+El paquete `.ipk` 0.7.2 se generó con `@webos-tools/cli` 3.2.6 y se verificó contra `dist/` y el
+servicio WiZ: 57 archivos, incluidos 18 del servicio; 257 pruebas en la verificación original del IPK;
+1.690.292 bytes. La suite posterior del repositorio pasó 269/269, incluidos 12 tests de la guardia
+fuera del IPK; no cambia el conteo del paquete. SHA-256:
+`61a3deb0458378b0885d65df6d64390e1f8f07b1264fe722aa21add2a22303b7`. El CLI aceptó su
 instalación; el watcher registró aceptación de boot y su monitor de potencia quedó activo. La activación y
 la restauración de Pantalla completa tienen confirmación física de 0.6.0; los
 controles manuales y el fondo se confirmaron en 0.5.1. El arranque en frío confirmó el hook de
 Home y la apertura de la app; el dueño confirmó que pulsar Home abre Mi pantalla. Foco,
 repetición/mantenimiento y otros ciclos de standby siguen pendientes. En 0.7.1 el dueño confirmó
 encendido tras apagar 20 s con el control y regreso desde YouTube con Home tras 2 s; el primer
-caso había fallado en 0.7.0. El paquete
+caso había fallado en 0.7.0. En 0.7.2 confirmó Home desde YouTube y encendido tras apagar 20 s
+directamente en Mi pantalla, sin LG primero en esos dos casos. No acredita cold boot nuevo,
+foco, repetición ni otros ciclos. La guardia externa está desplegada; su fallback en frío con
+la app ausente sigue sin prueba física. El paquete
 privado y sus configuraciones del clima y las lámparas no se publican.
 Esa herramienta no forma parte de la app ni es necesaria para la vista previa.
 Para volver a empaquetar tras cambiar archivos, ejecutar `npm run build` y luego

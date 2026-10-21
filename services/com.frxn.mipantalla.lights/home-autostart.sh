@@ -19,6 +19,11 @@ WATCH=$DIR/home-watch.js
 PIDFILE=/tmp/mipantalla-home.pid
 LOGFILE=/tmp/mipantalla-home.log
 POLL_MS=${MIPANTALLA_HOME_POLL_MS:-100}
+set --
+if [ "${MIPANTALLA_HOME_NATIVE:-0}" = 1 ] ||
+   [ -f /var/lib/mipantalla-maintenance/native-home/enabled ]; then
+  set -- --native-home
+fi
 
 case "$POLL_MS" in
   ''|*[!0-9]*) POLL_MS=100 ;;
@@ -45,8 +50,8 @@ fi
 
 export NODE_PATH=/usr/lib/node_modules:/usr/lib/nodejs
 if command -v nohup >/dev/null 2>&1; then
-  nohup "$NODE" "$WATCH" --boot --watch --poll-ms="$POLL_MS" >>"$LOGFILE" 2>&1 &
+  nohup "$NODE" "$WATCH" --boot --watch --poll-ms="$POLL_MS" "$@" >>"$LOGFILE" 2>&1 &
 else
-  "$NODE" "$WATCH" --boot --watch --poll-ms="$POLL_MS" >>"$LOGFILE" 2>&1 &
+  "$NODE" "$WATCH" --boot --watch --poll-ms="$POLL_MS" "$@" >>"$LOGFILE" 2>&1 &
 fi
 exit 0
