@@ -353,27 +353,66 @@
     function chip(row, label, kind, value, action) {
       var node = element('button', 'lights-chip lights-' + kind, label);
       node.type = 'button';
+      node.setAttribute('data-value', String(value));
       node.addEventListener('click', action);
       chips.push({ node: node, kind: kind, value: value });
       row.appendChild(node);
       return node;
     }
-    function group(title) {
-      var wrap = element('div', 'lights-group');
+    function group(title, kind, parent) {
+      var wrap = element('div', 'lights-group lights-group-' + kind);
       wrap.setAttribute('role', 'group');
       wrap.setAttribute('aria-label', title);
       wrap.appendChild(element('p', 'lights-label', title));
       var row = element('div', 'lights-row');
       wrap.appendChild(row);
-      controls.appendChild(wrap);
+      (parent || controls).appendChild(wrap);
       return row;
     }
-    var row = group('Encendido');
+    var mainCard = element('div', 'lights-main-card');
+    var overview = element('div', 'lights-overview');
+    var room = element('div', 'lights-room');
+    room.appendChild(element('p', 'lights-label', 'Estado del living'));
+    var powerState = element('p', 'lights-power-state');
+    room.appendChild(powerState);
+    overview.appendChild(room);
+    var selectionCount = element('p', 'lights-selection-count');
+    overview.appendChild(selectionCount);
+    mainCard.appendChild(overview);
+    var quick = element('div', 'lights-quick-controls');
+    mainCard.appendChild(quick);
+    controls.appendChild(mainCard);
+    var row = group('Encendido', 'power', quick);
     chip(row, 'Encender', 'power', true, function () { controller.power(true); });
     chip(row, 'Apagar', 'power', false, function () { controller.power(false); });
-    row = group('Brillo');
+    var brightness = element('div', 'lights-brightness');
+    var levelValue = element('p', 'lights-level-value');
+    var levelCaption = element('p', 'lights-level-caption');
+    brightness.appendChild(levelValue);
+    brightness.appendChild(levelCaption);
+    quick.appendChild(brightness);
+    var levelTrack = element('div', 'lights-level-track');
+    levelTrack.setAttribute('aria-hidden', 'true');
+    var levelFill = element('span', 'lights-level-fill');
+    levelTrack.appendChild(levelFill);
+    brightness.appendChild(levelTrack);
+    row = group('Brillo', 'level', brightness);
     LEVELS.forEach(function (level) { chip(row, level + ' %', 'level', level, function () { controller.level(level); }); });
-    row = group('Color');
+    row = group('Cómo acompañar tu espacio', 'modes');
+    var descriptions = ['Color y brillo a tu gusto', 'La foto de Mi pantalla', 'El video de la TV'];
+    MODES.forEach(function (entry, index) {
+      var node = chip(row, '', 'mode', entry[0], function () { controller.setMode(entry[0]); });
+      node.setAttribute('aria-label', entry[1] + '. ' + descriptions[index]);
+      node.appendChild(element('span', 'lights-mode-index', '0' + (index + 1)));
+      node.appendChild(element('span', 'lights-mode-title', entry[1]));
+      node.appendChild(element('span', 'lights-mode-description', descriptions[index]));
+      var detail = element('span', 'lights-mode-state');
+      node.appendChild(detail);
+      chips[chips.length - 1].detail = detail;
+    });
+    var palette = element('div', 'lights-palette');
+    controls.appendChild(palette);
+    row = group('Color del ambiente', 'colors', palette);
     COLORS.forEach(function (entry) {
       var node = chip(row, '', 'color', entry[1].join(','), function () { controller.color(entry[1]); });
       var swatch = element('span', 'lights-swatch');
@@ -382,18 +421,20 @@
       node.appendChild(element('span', 'lights-swatch-name', entry[0]));
       node.setAttribute('aria-label', 'Color ' + entry[0].toLowerCase());
     });
-    row = group('Blanco');
+    row = group('Blancos', 'whites', palette);
     WHITES.forEach(function (entry) {
-      chip(row, entry[0], 'white', entry[1], function () { controller.white(entry[1]); }).setAttribute('aria-label', 'Blanco ' + entry[0].toLowerCase() + ', ' + entry[1] + ' K');
+      var node = chip(row, entry[0], 'white', entry[1], function () { controller.white(entry[1]); });
+      node.setAttribute('aria-label', 'Blanco ' + entry[0].toLowerCase() + ', ' + entry[1] + ' K');
+      node.appendChild(element('span', 'lights-white-temperature', entry[1] + ' K'));
     });
-    row = group('Modo');
-    MODES.forEach(function (entry) { chip(row, entry[1], 'mode', entry[0], function () { controller.setMode(entry[0]); }); });
+    var diagnostics = element('div', 'lights-diagnostics');
+    var note = element('p', 'lights-note');
+    diagnostics.appendChild(note);
     var review = element('button', 'lights-chip lights-screen-review', 'Revisar captura');
     review.type = 'button';
     review.addEventListener('click', function () { controller.screenStatus(); });
-    row.appendChild(review);
-    var note = element('p', 'lights-note');
-    controls.appendChild(note);
+    diagnostics.appendChild(review);
+    controls.appendChild(diagnostics);
 
     function enabled() {
       return Array.prototype.slice.call(host.querySelectorAll('button:not([disabled])')).filter(function (node) { return node.getClientRects().length > 0; });
@@ -450,6 +491,16 @@
         white: common(chosen, function (d) { return d.state.temperature; }),
         mode: view.mode
       };
+      var complete = chosen.length > 0 && chosen.length === view.selected.length;
+      var knownPower = complete && chosen.every(function (d) { return d.reachable && !d.note && d.state.on !== null; });
+      var knownLevel = complete && chosen.every(function (d) { return d.reachable && !d.note && d.state.brightness !== null; });
+      powerState.textContent = view.phase === 'checking' ? 'Consultando luces…' : !chosen.length && !view.selected.length ? 'Elegí tus lámparas' :
+        !knownPower ? 'Estado sin confirmar' : current.power === true ? 'Luces encendidas' : current.power === false ? 'Luces apagadas' : 'Encendido mixto';
+      selectionCount.textContent = view.selected.length + (view.selected.length === 1 ? ' lámpara seleccionada' : ' lámparas seleccionadas');
+      levelValue.textContent = knownLevel ? current.level === null ? 'Mixto' : current.level + ' %' : '—';
+      levelCaption.textContent = !knownLevel ? 'Brillo sin confirmar' : current.level === null ? 'Niveles diferentes' : 'Brillo del grupo';
+      levelFill.style.width = knownLevel && current.level !== null ? current.level + '%' : '0%';
+      levelTrack.setAttribute('data-known', knownLevel && current.level !== null ? 'true' : 'false');
       q('.lights-summary').textContent = view.phase === 'checking' ? 'Consultando el servicio de luces…' :
         view.phase === 'unavailable' ? 'Control de luces no disponible: ' + view.reason :
         (caps.demo ? 'Demo: no se envían cambios a lámparas reales. ' : '') +
@@ -465,9 +516,10 @@
         var allowed = restoring ? ready && !view.busy : act && (item.kind !== 'mode' || item.value === 'manual' || (item.value === 'ambient' ? caps.wallpaperSync : screenAllowed(view)));
         item.node.disabled = !allowed;
         item.node.setAttribute('aria-pressed', current[item.kind] !== null && String(current[item.kind]) === String(item.value) ? 'true' : 'false');
+        if (item.detail) item.detail.textContent = current.mode === item.value ? 'Modo actual' : item.value === 'screen' ?
+          (screenAllowed(view) ? 'Verificado' : 'Sin verificar') : item.value === 'ambient' && !caps.wallpaperSync ? 'No disponible' : 'Disponible';
       });
-      var notes = ['Modo actual: ' + (view.mode ? MODES.filter(function (m) { return m[0] === view.mode; })[0][1] : 'sin confirmar') + '.'];
-      notes.push('Acompañar fondo: solo la foto de Mi pantalla; no otras apps ni HDMI.');
+      var notes = ['Acompañar fondo: solo la foto de Mi pantalla; no otras apps ni HDMI.'];
       if (!caps.wallpaperSync) notes.push('Acompañar fondo: pendiente del servicio de luces.');
       notes.push('Pantalla completa — ' + screenNote(view.screen));
       if (!manual) notes.push(view.mode === 'screen' ? 'Volvé a Manual para cambiar las lámparas; primero se detiene la captura y se restauran las luces.' : 'Un control manual detiene el seguimiento del fondo.');

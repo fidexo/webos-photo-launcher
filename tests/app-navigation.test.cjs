@@ -24,7 +24,8 @@ function harness(onTV, editing = false) {
     const result = {name, group, hidden, disabled: false, scrolls: 0, visibilityReads: 0,
       classList: {contains: (name) => name === 'tile' && group === 'dock'},
       getClientRects() { this.visibilityReads++; return this.hidden ? [] : [1]; },
-      getBoundingClientRect() { return {left: x, top: y, width: 40, height: 40}; },
+      geometryReads: 0,
+      getBoundingClientRect() { this.geometryReads++; return {left: x, top: y, width: 40, height: 40}; },
       focus() { document.activeElement = this; }, scrollIntoView() { this.scrolls++; }};
     controls.push(result); return result;
   }
@@ -44,6 +45,15 @@ test('TV dock arrows focus the next icon without requesting a post-focus scroll'
   const h = harness(true); h.one.focus(); h.press('ArrowRight');
   assert.equal(h.document.activeElement, h.two);
   assert.equal(h.two.scrolls, 0);
+});
+
+test('horizontal TV dock navigation never forces layout, skips disabled icons and stops at the edges', () => {
+  const h = harness(true); h.one.focus(); h.press('ArrowRight');
+  assert.equal(h.document.activeElement, h.two);
+  h.press('ArrowRight'); assert.equal(h.document.activeElement, h.two);
+  h.press('ArrowLeft'); assert.equal(h.document.activeElement, h.one);
+  h.two.disabled = true; h.press('ArrowRight'); assert.equal(h.document.activeElement, h.one);
+  assert.equal(h.one.visibilityReads + h.two.visibilityReads + h.one.geometryReads + h.two.geometryReads, 0);
 });
 
 test('preview dock and TV manager retain scrolling when moving focus', () => {

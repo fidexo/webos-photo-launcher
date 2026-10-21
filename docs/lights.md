@@ -14,6 +14,24 @@ siguen pendientes. [Estado de la integración](screen-sync.md).
 
 ## Elegir y controlar las lámparas
 
+### Panel 0.7.4
+
+El panel ahora presenta las lámparas en una columna y el estado del living en una tarjeta
+principal con encendido y brillo. Debajo aparecen los tres modos con su explicación, la paleta
+de colores, los blancos y el diagnóstico de captura. Sólo la lista de lámparas se desplaza en
+la TV; flechas recorren controles y Atrás vuelve al botón Luces.
+
+El resumen confirma encendido y brillo únicamente cuando respondieron todas las lámparas
+seleccionadas. Si discrepan muestra «Mixto»; si falta alguna respuesta, «sin confirmar».
+Abrir consulta capacidades y las lámparas guardadas; buscar, cambiar colores o activar un modo
+siguen requiriendo una acción explícita. La captura conserva sus comprobaciones previas.
+
+Se verificó la vista en Brave a 1080p y 720p con un cliente simulado, incluidas diez lámparas.
+En la TV se vieron las seis guardadas y su brillo común. No se enviaron cambios de iluminación
+durante esa comprobación; la aceptación visual del rework por parte del dueño queda pendiente.
+
+### Controles
+
 1. Abrí Luces. La primera consulta puede tardar unos segundos mientras el servicio busca las
    lámparas guardadas. Una consulta que falla deja el estado desconocido; no significa apagado.
 2. Pulsá **Buscar lámparas** para consultar la red local. Marcá las que correspondan al living.

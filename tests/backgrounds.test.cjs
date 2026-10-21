@@ -34,7 +34,7 @@ test('credits show author and source host', () => {
 });
 
 function harness(list, failing = [], deferLoads = false, initialList) {
-  const state = { now: 0, hidden: false, timers: [], shown: [], loads: [], loadOptions: [], pending: [] };
+  const state = { now: 0, hidden: false, timers: [], frames: [], events: [], frostChecks: 0, painted: [], shown: [], loads: [], loadOptions: [], pending: [] };
   const storage = { value: null, getItem() { return this.value; }, setItem(key, value) { this.value = value; } };
   const element = () => {
     const classes = new Set();
@@ -51,15 +51,18 @@ function harness(list, failing = [], deferLoads = false, initialList) {
     isHidden: () => state.hidden,
     setTimer: (fn, ms) => { const timer = { fn, ms }; state.timers.push(timer); return timer; },
     clearTimer: (timer) => { state.timers = state.timers.filter((candidate) => candidate !== timer); },
+    requestFrame: (fn) => { state.frames.push(fn); },
     load: (image, src, done, options) => {
+      image.src = src;
       state.loads.push(src);
       state.loadOptions.push(options);
       if (deferLoads) state.pending.push({ src, done });
       else done(failing.indexOf(src) === -1);
     },
-    paint: () => true,
-    frostEnabled: () => true,
-    onShow: (entry) => state.shown.push(entry.src)
+    paint: (frost, image) => { state.painted.push(image.src); state.events.push('paint:' + image.src); return true; },
+    frostEnabled: () => { state.frostChecks += 1; return true; },
+    layout: () => state.events.push('layout'),
+    onShow: (entry) => { state.shown.push(entry.src); state.events.push('show:' + entry.src); }
   });
   state.rotation = () => state.timers.filter((timer) => timer.ms === B.ROTATE_MS);
   state.fire = (timer) => { state.timers = state.timers.filter((item) => item !== timer); timer.fn(); };
@@ -262,6 +265,103 @@ test('only the first visible swap is immediate; preloading and later swaps keep 
   }
 });
 
+test('the first photo becomes visible before frost, layout or decode, then paints after a frame and a task', () => {
+  const { slideshow, state } = harness(LOCAL);
+  const image = state.layers[0].image;
+  let decoded;
+  image.decode = () => { state.events.push('decode'); return { then(resolve) { decoded = resolve; } }; };
+  slideshow.start();
+  assert.deepEqual(state.events, ['show:' + LOCAL[0].src]);
+  assert.equal(image.classList.contains('is-front'), true);
+  assert.equal(state.layers[0].frost.classList.contains('is-front'), false);
+  assert.equal(state.frames.length, 1);
+  assert.equal(state.frostChecks, 0, 'the initial swap must not read computed styles');
+  state.frames.shift()();
+  assert.deepEqual(state.events, ['show:' + LOCAL[0].src], 'rAF itself must not block the first paint');
+  assert.equal(state.frostChecks, 0, 'style reads also wait until the following task');
+  state.fire(state.timers.find((timer) => timer.ms === 0));
+  assert.deepEqual(state.events, ['show:' + LOCAL[0].src, 'decode']);
+  decoded();
+  assert.deepEqual(state.events, ['show:' + LOCAL[0].src, 'decode', 'paint:' + LOCAL[0].src, 'layout']);
+  assert.equal(state.layers[0].frost.classList.contains('is-front'), true);
+});
+
+test('a hanging or rejecting initial decode never delays the photo or leaves frost waiting forever', () => {
+  for (const reject of [false, true]) {
+    const { slideshow, state } = harness([LOCAL[0]]);
+    let rejected;
+    state.layers[0].image.decode = () => ({ then(resolve, failure) { rejected = failure; } });
+    slideshow.start();
+    assert.deepEqual(state.shown, [LOCAL[0].src]);
+    state.frames.shift()();
+    state.fire(state.timers.find((timer) => timer.ms === 0));
+    const limit = state.timers.find((timer) => timer.ms > 0);
+    assert.ok(limit.ms <= 2000);
+    if (reject) rejected();
+    else state.fire(limit);
+    assert.deepEqual(state.painted, [LOCAL[0].src]);
+    rejected();
+    assert.deepEqual(state.painted, [LOCAL[0].src], 'late decode settlement cannot paint twice');
+    assert.equal(state.timers.length, 0);
+  }
+});
+
+test('initial frost callbacks cannot paint hidden, replaced, rotated or reassigned images', () => {
+  for (const boundary of ['frame-hidden', 'task-hidden', 'decode-hidden', 'gallery', 'rotation', 'src', 'image']) {
+    const { slideshow, state } = harness(LOCAL);
+    let decoded;
+    state.layers[0].image.decode = () => ({ then(resolve) { decoded = resolve; } });
+    slideshow.start();
+    if (boundary === 'frame-hidden') state.hidden = true;
+    state.frames.shift()();
+    if (boundary === 'frame-hidden') { assert.deepEqual(state.painted, []); continue; }
+    if (boundary === 'task-hidden') state.hidden = true;
+    state.fire(state.timers.find((timer) => timer.ms === 0));
+    if (boundary === 'task-hidden') { assert.deepEqual(state.painted, []); continue; }
+    if (boundary === 'decode-hidden') state.hidden = true;
+    if (boundary === 'gallery') {
+      slideshow.replace([remote(1)]);
+      state.fire(state.timers.find((timer) => timer.ms === B.FADE_MS + 200));
+    }
+    if (boundary === 'rotation') state.fire(state.rotation()[0]);
+    if (boundary === 'src') state.layers[0].image.src = LOCAL[1].src;
+    if (boundary === 'image') state.layers[0].image = { src: LOCAL[0].src };
+    const before = state.events.slice();
+    decoded();
+    assert.deepEqual(state.events, before, boundary + ' discards the deferred frost work');
+  }
+});
+
+test('returning from hidden rebuilds initial frost once even with an earlier decode still pending', () => {
+  for (const settledHidden of [false, true]) {
+    const { slideshow, state } = harness([LOCAL[0]]);
+    const callbacks = [];
+    state.layers[0].image.decode = () => ({ then(resolve) { callbacks.push(resolve); } });
+    slideshow.start(); state.frames.shift()();
+    state.fire(state.timers.find(timer => timer.ms === 0));
+    state.hidden = true; slideshow.visibilityChanged();
+    if (settledHidden) callbacks[0]();
+    state.hidden = false; slideshow.visibilityChanged();
+    assert.equal(state.frames.length, 1, 'a visible photo must not permanently lose its glass');
+    state.frames.shift()(); state.fire(state.timers.find(timer => timer.ms === 0));
+    callbacks.forEach(resolve => resolve());
+    assert.deepEqual(state.painted, [LOCAL[0].src]);
+  }
+});
+
+test('normal preloading paints frost before the next photo is swapped', () => {
+  const { slideshow, state } = harness(LOCAL);
+  slideshow.start();
+  assert.deepEqual(state.painted, []);
+  state.fire(state.timers.find((timer) => timer.ms === B.FADE_MS + 200));
+  assert.deepEqual(state.painted, [LOCAL[1].src]);
+  assert.equal(state.layers[1].frostReady, true);
+  assert.equal(state.layers[1].frost.classList.contains('is-front'), false);
+  state.fire(state.rotation()[0]);
+  assert.equal(state.layers[1].frost.classList.contains('is-front'), true);
+  assert.equal(state.events.indexOf('paint:' + LOCAL[1].src) < state.events.indexOf('show:' + LOCAL[1].src), true);
+});
+
 function loaderHarness() {
   const timers = [];
   const fake = { window: {}, Math, JSON, setTimeout: (fn, ms) => { const timer = { fn, ms }; timers.push(timer); return timer; }, clearTimeout: (timer) => { const at = timers.indexOf(timer); if (at !== -1) timers.splice(at, 1); } };
@@ -434,6 +534,27 @@ test('an empty or invalid gallery is ignored', () => {
     assert.equal(slideshow.replace(list), false);
   }
   assert.equal(state.timers.length, before);
+  assert.equal(slideshow.isReplaced(), false);
+});
+
+test('restoring the visible base after a failed replacement rebuilds its deferred frost once', async () => {
+  const { slideshow, state } = harness([LOCAL[0]], [], true);
+  let decode;
+  state.layers[0].image.decode = () => new Promise((resolve) => { decode = resolve; });
+  slideshow.start(); state.pending.shift().done(true);
+  state.frames.shift()(); state.fire(state.timers.find((timer) => timer.ms === 0));
+  assert.equal(typeof decode, 'function');
+  slideshow.replace([remote(1)]);
+  state.now = B.FADE_MS + 200;
+  state.fire(state.timers.find((timer) => timer.ms === B.FADE_MS + 200));
+  state.pending.shift().done(false);
+  decode(); await Promise.resolve();
+  assert.deepEqual(state.painted, [], 'the superseded decode stays invalid');
+  assert.equal(state.frames.length, 1, 'the restored visible base schedules a fresh frost');
+  state.frames.shift()(); state.fire(state.timers.find((timer) => timer.ms === 0));
+  decode(); await Promise.resolve();
+  assert.deepEqual(state.painted, [LOCAL[0].src]);
+  assert.equal(state.layers[0].frostReady, true);
   assert.equal(slideshow.isReplaced(), false);
 });
 

@@ -127,3 +127,63 @@ La suite completa pasó **280/280**. El IPK verificado contiene **57 archivos**,
 servicio**, y ocupa **1.690.546 bytes**. Los tests de la guardia externa pertenecen al repositorio,
 no al contenido del IPK. SHA-256:
 `7d9ef901916a6d258967be8e9d175e76ba3686926855c3d1396f4c0218a07175`.
+
+## 0.7.4: fondo inmediato, foco y Luces
+
+El dueño consideró aceptable la 0.7.3, pero pidió un fondo predeterminado mientras llega la foto,
+un foco menos seco y un rediseño del panel Luces. La 0.7.4 está instalada.
+
+`assets/wallpaper.svg`, una ilustración local de 5,5 KB ya incluida, ahora es el fondo CSS de la
+pantalla y se precarga desde el HTML. Se ve antes de que el slideshow tenga una foto; esa foto
+entra con un fundido de 1,2 s. Se conservan la foto diaria validada en caché, la galería local,
+sus créditos y la rotación. El vidrio inicial se prepara después de presentar la foto, con rAF
+y otra tarea, sin bloquear `onShow`. El canvas trabaja directamente a 160 px de ancho, con una
+base y una capa de blur, sin los buffers intermedios grandes. Hay guardas y regresiones para
+decode tardío, ocultar/volver, cambiar de galería y restaurar la base tras un fallo remoto.
+
+### Muestra del fondo en la TV
+
+Recarga por CDP sobre el paquete final, con la foto diaria en caché HTTP:
+
+| Señal | Tiempo desde `performance.now()` |
+| --- | ---: |
+| Primer rAF que ve el SVG configurado por CSS | 308 ms |
+| `first-paint` / `first-contentful-paint` | 554 ms |
+| Asignación de la foto diaria | 607 ms |
+| Carga / paso al frente | 1.040 / 1.043 ms |
+| Primer rAF con opacidad de la foto mayor que cero | 1.240 ms |
+| Foto con opacidad mayor que 0,95 | 2.235 ms |
+
+La marca de 308 ms comprueba el estilo calculado; no acredita que el panel físico ya lo haya
+mostrado. El primer pintado llegó antes de solicitar la foto diaria. El fundido tarda más en
+alcanzar opacidad completa que el salto inmediato de 0.7.3 por decisión visual del dueño.
+No se midió desde power-on ni se acredita aquí funcionamiento offline completo.
+
+### Foco con movimiento al detenerse
+
+Animar el vidrio durante cada flecha bajaba a unos 27 FPS en esta TV. Se descartaron esa
+variante y las promociones de capas que no resolvieron el costo. El aro ahora responde sin
+espera; la tarjeta se eleva 0,3 rem y escala a 1,055 en 140 ms sólo si el foco permanece 150 ms.
+Al recorrer íconos rápidamente se cancela la animación pendiente. Movimiento reducido anula
+duración y retraso. Izquierda/derecha en el dock de TV siguen el orden de los elementos
+visibles sin pedir sus rectángulos; otras direcciones, vista previa y Personalizar conservan
+la navegación geométrica.
+
+En el paquete final, con flechas cada 120 ms durante 3,5 s: **208 intervalos**, media
+**16,826 ms** (aprox. **59,4 FPS**), p95 **16,666 ms**, máximo **49,998 ms**, un intervalo
+mayor de 25 ms y p95 del handler **20,6 ms**. Es una muestra de navegación rápida: no
+demuestra 60 FPS al moverse despacio ni sustituye la evaluación con el control físico.
+
+### Verificación y paquete
+
+Luces se revisó en Brave a 1920×1080 y 1280×720 con un cliente simulado y hasta diez lámparas,
+sin scroll global; flechas y Atrás conservaron el foco. En la TV real mostró las seis lámparas
+guardadas y brillo común del 100 %, sin enviar cambios a las luces. Estado desconocido,
+estado mixto y respuesta parcial tienen pruebas específicas. [Uso](lights.md#panel-074).
+
+Pasaron **295/295 pruebas**, build, vista previa y verificación del IPK: **57 archivos**,
+**18 del servicio**, **1.693.138 bytes**. SHA-256:
+`bd440d5aa4d4a7c7e7a572430bdc7f64dde6d492ceee7cbdf3d7ee36288c165e`.
+Se preservaron la configuración privada de captura y el rol del servicio. La lectura posterior
+confirmó Home nativo, watcher sin polling de input, las preferencias publicitarias desactivadas
+y las tres apps LG retiradas todavía ausentes. No se repitió el ciclo físico de encendido/Home.

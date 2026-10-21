@@ -91,35 +91,22 @@
     return nextIndex(list, -1);
   }
 
-  // Reduce por mitades (evita el aliasing de un solo drawImage) hasta ~160 px de ancho y, si el
-  // canvas soporta ctx.filter (Chromium 52+), aplica un desenfoque único sobre esa miniatura:
-  // se calcula una vez por foto, no en cada cuadro, y evita la cuadrícula al ampliarla.
+  // Pinta directamente a 160 px: evita buffers intermedios grandes que frenaban la TV.
+  // La base rellena bordes y el blur pequeño suaviza la miniatura al ampliarla en el dock.
   function paintFrost(canvas, image) {
     var width = image.naturalWidth || 1920;
     var height = image.naturalHeight || 1080;
     var targetHeight = Math.max(1, Math.round(FROST_WIDTH * height / width));
     try {
-      var source = image;
-      var sw = width;
-      var sh = height;
-      while (sw > FROST_WIDTH * 2) {
-        sw = Math.round(sw / 2);
-        sh = Math.max(1, Math.round(sh / 2));
-        var step = document.createElement('canvas');
-        step.width = sw;
-        step.height = sh;
-        step.getContext('2d').drawImage(source, 0, 0, sw, sh);
-        source = step;
-      }
       canvas.width = FROST_WIDTH;
       canvas.height = targetHeight;
       var context = canvas.getContext('2d');
       context.clearRect(0, 0, FROST_WIDTH, targetHeight);
-      context.drawImage(source, 0, 0, FROST_WIDTH, targetHeight);
+      context.drawImage(image, 0, 0, FROST_WIDTH, targetHeight);
       if (typeof context.filter === 'string') {
         // La base sin desenfoque rellena los bordes, que el blur dejaría transparentes.
         context.filter = 'blur(' + FROST_BLUR + 'px)';
-        context.drawImage(source, 0, 0, FROST_WIDTH, targetHeight);
+        context.drawImage(image, 0, 0, FROST_WIDTH, targetHeight);
         context.filter = 'none';
       }
       canvas.setAttribute('data-width', width);
@@ -145,13 +132,17 @@
   }
 
   // options: layers [{image, frost}], list, initialList, fallback, onShow(entry), storage,
-  // isHidden(), now(), setTimer, clearTimer, load(image, src, done, options), paint(), frostEnabled(), layout().
+  // isHidden(), now(), setTimer, clearTimer, requestFrame, load(image, src, done, options), paint(), frostEnabled(), layout().
   // replace(list) cambia la galería sin cortar un fundido: espera a que termine la foto en curso y
   // descarta los resultados de cargas de la galería anterior (generation).
   function createSlideshow(options) {
     var now = options.now || function () { return Date.now(); };
     var setTimer = options.setTimer || function (fn, ms) { return setTimeout(fn, ms); };
     var clearTimer = options.clearTimer || function (id) { clearTimeout(id); };
+    var requestFrame = options.requestFrame || function (fn) {
+      if (typeof window.requestAnimationFrame === 'function') return window.requestAnimationFrame(fn);
+      return setTimer(fn, 16);
+    };
     var isHidden = options.isHidden || function () { return false; };
     var layers = options.layers;
     var list = cleanList(options.list);
@@ -232,6 +223,7 @@
       current = -1;
       for (var i = 0; i < list.length; i += 1) if (list[i].src === shownSrc) current = i;
       if (current === -1) { show(nextIndex(list, -1)); return; }
+      if (!layers[front].frostReady) deferInitialFrost(layers[front]);
       schedule(ROTATE_MS - (now() - shownAt));
       schedulePreload();
     }
@@ -239,12 +231,45 @@
     function prepare(index, done) {
       var layer = back();
       var token = generation;
+      var initial = front === -1;
       options.load(layer.image, list[index].src, function (ok) {
         if (token !== generation) return; // carga de una galería anterior: se ignora
-        if (ok && options.frostEnabled()) layer.frostReady = options.paint(layer.frost, layer.image);
+        if (ok && !initial && options.frostEnabled()) layer.frostReady = options.paint(layer.frost, layer.image);
         else layer.frostReady = false;
         done(ok);
-      }, { immediate: front === -1 });
+      }, { immediate: initial });
+    }
+
+    // Primero se presenta la foto. rAF + otra tarea deja un frame libre antes de decode y canvas.
+    function deferInitialFrost(layer) {
+      var token = generation;
+      var entry = list[current];
+      var image = layer.image;
+      var src = image.src;
+      function valid() {
+        return token === generation && !isHidden() && !layer.frostReady && layers[front] === layer &&
+          list[current] === entry && layer.image === image && image.src === src;
+      }
+      requestFrame(function () {
+        if (!valid()) return;
+        setTimer(function () {
+          if (!valid() || !options.frostEnabled()) return;
+          var finished = false;
+          var guard = null;
+          function finish() {
+            if (finished) return;
+            finished = true;
+            if (guard !== null) clearTimer(guard);
+            if (!valid() || !options.frostEnabled()) return;
+            layer.frostReady = options.paint(layer.frost, image);
+            if (options.layout) options.layout();
+            layer.frost.classList.toggle('is-front', layer.frostReady);
+          }
+          if (typeof image.decode !== 'function') { finish(); return; }
+          guard = setTimer(finish, DECODE_WAIT_MS);
+          try { image.decode().then(finish, finish); } catch (error) { finish(); }
+        }, 0);
+      });
     }
 
     function swap(index) {
@@ -262,7 +287,7 @@
       shownAt = now();
       shownSrc = list[index].src;
       preloaded = null;
-      if (options.layout) options.layout();
+      if (!initial && options.layout) options.layout();
       if (!fallback && options.storage) {
         try { options.storage.setItem(STORAGE_KEY, list[index].src); } catch (error) { /* sin persistencia */ }
       }
@@ -270,6 +295,7 @@
       schedule(ROTATE_MS);
       // Precarga la siguiente cuando termina el fundido, para que la capa saliente no cambie a la vista.
       schedulePreload();
+      if (initial) deferInitialFrost(layers[incoming]);
     }
 
     function preloadNext() {
@@ -326,6 +352,7 @@
       visibilityChanged: function () {
         if (isHidden()) { schedule(0); schedulePreload(); return; }
         if (current === -1) return;
+        if (!layers[front].frostReady) deferInitialFrost(layers[front]);
         if (pending) {
           if (busy) cancelLoad();
           schedulePreload();

@@ -14,7 +14,7 @@ El dueño confirmó físicamente en 0.7.1 que Home desde YouTube termina en Mi p
 2 s, y que apagar con el control 20 s y encender vuelve a abrirla sola. Root y HBC
 quedaron persistentes y se instaló el hook de arranque de la fase 1: en un arranque en frío HBC
 ejecutó el watcher y Mi pantalla abrió en primer plano. Faltan el foco, la repetición y otros ciclos de standby.
-La versión actual **0.7.3** conserva el Home nativo de 0.7.2 con `general.defaultApps.home: com.frxn.mipantalla`;
+La versión actual **0.7.4** conserva el Home nativo de 0.7.2 con `general.defaultApps.home: com.frxn.mipantalla`;
 el watcher conserva boot y power/wake, sin polling de input. La prueba de HOME por entrada de red
 terminó en Mi pantalla. En 0.7.2 el dueño confirmó después Home físico desde YouTube y encendido
 tras apagar 20 s directamente en Mi pantalla, sin Home de LG primero en esos dos casos.
@@ -26,6 +26,17 @@ y [Home e inicio automático](docs/home-takeover.md).
 **Tutorial completo:** [docs/tutorial.md](docs/tutorial.md) · qué probamos y qué falló:
 [docs/what-we-tried.md](docs/what-we-tried.md) · limpieza: [docs/cleaning.md](docs/cleaning.md) ·
 roadmap: [docs/roadmap.md](docs/roadmap.md) · fuentes: [docs/sources.md](docs/sources.md).
+
+**0.7.4:** fondo local liviano desde el primer pintado, seguido por un fundido de la foto diaria;
+vidrio inicial diferido y calculado en un canvas pequeño. El foco marca el ícono al instante y lo
+eleva suavemente al detener la navegación. Luces se rediseñó como un centro de control del living:
+estado del grupo, encendido, brillo, modos, colores y blancos. Este rework lo implementó Codex;
+no se pudo iniciar Opus porque el delegador devolvió `Authentication required`.
+Pasaron **295 pruebas** y se verificó e instaló el IPK. En la TV se observaron las seis lámparas
+y su brillo; no se enviaron cambios de iluminación durante esta revisión. Una muestra de navegación
+rápida dio **59,4 FPS** y una recarga tuvo primer pintado a **554 ms** con el fondo local antes de
+la foto. Son pruebas por CDP, no tiempos desde el encendido ni una confirmación perceptual del dueño.
+[Mediciones y límites](docs/performance.md#074-fondo-inmediato-foco-y-luces) · [panel Luces](docs/lights.md#panel-074).
 
 La vista previa 0.4 se verificó en Brave a 1920×1080, 1280×720, 728 y 360 px. La aceptación del
 instalador y del comando de apertura no acredita por sí sola el funcionamiento visual en hardware.

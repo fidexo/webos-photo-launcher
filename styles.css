@@ -68,7 +68,8 @@ button:disabled { cursor: default; }
 }
 .wallpaper {
   z-index: 0;
-  background: #070a1c radial-gradient(ellipse 80% 70% at 70% 20%, #16204a, #070a1c 70%);
+  /* 5,4 KB incluidos en la app: se ve antes de que arranque JavaScript o llegue una foto. */
+  background: #070a1c url('assets/wallpaper.svg') center center / cover no-repeat;
   overflow: hidden;
 }
 /* Fundido cruzado: la capa entrante aparece encima; la saliente se apaga recién al terminar. */
@@ -93,9 +94,7 @@ button:disabled { cursor: default; }
   opacity: 1;
   transition: opacity var(--fade) ease-in-out;
 }
-/* La primera foto ya está lista: mostrarla sin un fundido desde negro. */
-.wallpaper-layer.is-front.is-initial,
-.frost-layer.is-front.is-initial { transition: none; }
+/* La primera foto también entra con fundido sobre el fondo predeterminado. */
 .aura {
   z-index: 1;
   opacity: 0;
@@ -630,8 +629,8 @@ button:disabled { cursor: default; }
   .dock:before { z-index: 1; } /* filo por encima del vidrio de respaldo */
 }
 
-/* Chromium 68 en TV: el foco cambia al instante, sin repintar halos durante las flechas.
-   Se conservan el vidrio estático, las fotos y su fundido; el borde blanco sigue marcando foco. */
+/* Chromium 68 en TV: el aro responde al instante y el vidrio se eleva al detenerse.
+   La espera de 150 ms evita animar cada tarjeta al mantener una flecha (120 ms). */
 html.is-tv .aura,
 html.is-tv .tile-glow { display: none !important; }
 html.is-tv .tile,
@@ -640,10 +639,29 @@ html.is-tv .tile-tint,
 html.is-tv .tile-ring {
   -webkit-animation: none !important;
   animation: none !important;
+}
+html.is-tv .tile,
+html.is-tv .tile-tint,
+html.is-tv .tile-ring {
   -webkit-transition: none !important;
   transition: none !important;
 }
-html.is-tv .tile-ring { box-shadow: none !important; }
+html.is-tv .tile-glass {
+  -webkit-transition: none;
+  transition: none;
+}
+html.is-tv .tile:focus .tile-glass,
+html.is-tv .tile.is-current .tile-glass {
+  -webkit-transition: -webkit-transform .14s cubic-bezier(.2, .8, .2, 1) .15s;
+  transition: transform .14s cubic-bezier(.2, .8, .2, 1) .15s;
+  -webkit-transform: translateY(-.3rem) scale(1.055);
+  transform: translateY(-.3rem) scale(1.055);
+}
+html.is-tv .tile-ring {
+  border-width: .24rem;
+  border-color: rgba(255, 255, 255, .82);
+  box-shadow: none !important;
+}
 
 /* ---------- Modo TV: 16:9, sin scroll, escala proporcional ---------- */
 @media (min-width: 1000px) {
@@ -767,5 +785,6 @@ html.is-preview .stage { border-radius: 1.25rem; }
     -webkit-animation-delay: 0s !important;
     animation-delay: 0s !important;
     transition-duration: .01ms !important;
+    transition-delay: 0s !important;
   }
 }

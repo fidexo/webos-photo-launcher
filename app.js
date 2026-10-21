@@ -319,12 +319,21 @@
 
   // ---------- Control remoto ----------
   function moveFocus(key) {
+    var active = document.activeElement;
+    // En TV el dock es una sola fila y render() sólo monta los íconos visibles.
+    // Izquierda/derecha no necesitan medir el vidrio mientras se está animando.
+    if (onTV && !editing && active && active.classList.contains('tile') && (key === 'ArrowLeft' || key === 'ArrowRight')) {
+      var row = Array.prototype.slice.call(document.querySelectorAll('.dock button:not([disabled])'));
+      var at = row.indexOf(active);
+      var next = at + (key === 'ArrowRight' ? 1 : -1);
+      if (at !== -1 && row[next]) row[next].focus();
+      return;
+    }
     var scope = editing ? panel : document;
     var selector = editing ? 'button:not([disabled])' : '.dock button:not([disabled]), .top-actions button:not([disabled])';
     var buttons = Array.prototype.slice.call(scope.querySelectorAll(selector)).filter(function (button) {
       return button.getClientRects().length > 0;
     });
-    var active = document.activeElement;
     if (buttons.indexOf(active) === -1) { if (buttons[0]) buttons[0].focus(); return; }
     var origin = active.getBoundingClientRect();
     var x = origin.left + origin.width / 2;
