@@ -1,20 +1,21 @@
-# ¿Se puede instalar todo desde una página web?
+# Asistente local y límites de instalar desde una web
 
-**Evaluación al 2026-10-21; no hay un instalador web implementado.** Podemos simplificar mucho
-la instalación, pero una página común no reemplaza SSH ni vuelve compatible cualquier TV con
-un método de root. Hoy el camino reproducible es el [tutorial con CLI](tutorial.md).
+**Estado al 2026-10-21: hay un piloto local implementado**, iniciado con `npm run setup` y
+manejado desde Brave. Requiere SSH root ya configurado y admite sólo la LG 49UN7310PSC con el
+firmware de referencia. No obtiene root desde cero ni es una web estática universal.
+[Guía, operaciones y validación pendiente](local-installer.md) · [camino manual](tutorial.md).
 
 ## Tres opciones
 
-| Opción | Qué podría hacer | Límite principal | Decisión |
+| Opción | Alcance | Límite principal | Estado |
 | --- | --- | --- | --- |
-| Solo navegador | Guía, configuración, descarga de archivos y quizá control SSAP emparejado. | Sin SSH/TCP/UDP arbitrarios; TLS, permisos y compatibilidad del TV. | Útil para el asistente; no prometer «hace todo». |
-| Web + compañero local | Interfaz web y proceso local que ejecute CLI/SSH con acciones limitadas. | Instalar un programa local y proteger su canal de control. | Mejor UX futura, después de estabilizar el instalador local. |
-| CLI local con `plan` / `apply` / `restore` | Comprobar, empaquetar, respaldar, instalar y verificar sobre una TV preparada. | Root previo y configuración particular; no todos los firmwares. | Primer prototipo recomendado. Todavía no existe. |
+| Solo navegador | Guía, configuración, descarga de archivos y quizá SSAP emparejado. | Sin SSH/TCP/UDP arbitrarios; TLS, permisos y compatibilidad del TV. | No implementado como instalador autónomo. |
+| Web + compañero local | Interfaz y motor local con acciones acotadas por SSH. | Root previo y perfil exacto. Aplicación idempotente de privacidad probada; otras mutaciones pendientes. | Piloto disponible mediante `npm run setup`. |
+| CLI con flags de plan/apply/restore | Futuro acceso sin interfaz al mismo flujo. | Necesita un contrato público y validación propia. | No hay esos comandos CLI; hoy son acciones internas de la API local. |
 
-La recomendación es una decisión de arquitectura basada en las interfaces existentes. No se
-probaron un wizard ni un compañero local en esta ronda. No se abrió un servidor de instalación,
-no se agregó ejecución remota ni se descargó un ejecutable de terceros para este fin.
+El compañero escucha sólo en loopback, con puerto dinámico y sesión local. No agrega un agente
+de instalación permanente en la TV ni permite una shell arbitraria desde la página. El frontend
+del launcher y el instalador de PC son programas distintos; Mi pantalla sigue en 0.7.5.
 
 ## Qué impide hacerlo todo con JavaScript en el browser
 
@@ -74,9 +75,9 @@ Brave de la computadora.
   [Especificación](https://wicg.github.io/local-network-access/) ·
   [explicación](https://github.com/WICG/local-network-access/blob/main/explainer.md).
 
-El alcance exacto de estos bloqueos en Brave y el browser de esta TV **no se ensayó** para un
-instalador. Son condiciones que la arquitectura debe resolver, no fallos observados de un
-producto que todavía no existe.
+El acceso directo de una web a la TV con esos protocolos **no se ensayó** como instalador.
+El piloto evita esa ruta: la página habla con su servidor local y OpenSSH conecta con la TV.
+Eso no convierte el soporte de red de la página en soporte SSH ni elimina el emparejamiento.
 
 ### Root sigue siendo una operación por compatibilidad
 
@@ -85,65 +86,47 @@ normal de instalación ni en un método universal. En la unidad de referencia se
 para un firmware concreto y se obtuvo root/HBC. Ese procedimiento tuvo recuperación y permisos
 propios; el ACK de descarga no acreditaba root. [Registro de lo ejecutado](root-and-home.md).
 
-El futuro instalador debe distinguir **TV original**, **Developer Mode**, **root disponible** y
-**HBC elevado/persistente**. Si falta un requisito, explicar qué paso manual corresponde.
-No probar exploits automáticamente, degradar firmware o repetir root sobre un equipo ya rooteado.
+El piloto exige root ya disponible. La automatización desde una **TV original** sigue pendiente:
+la ruta upstream investigada produjo un error de firma de Developer Mode que necesitó
+recuperación manual. No probar exploits automáticamente, degradar firmware o repetir root sobre
+un equipo ya rooteado. [Registro y recuperación](root-and-home.md).
 
-## Propuesta: instalador local primero
+## Qué hace el piloto actual
 
-Una primera versión debería tener tres operaciones separadas y acotadas:
+El motor implementa `status`, `plan`, `apply` y `restore` detrás de la interfaz; no son flags CLI.
+El plan vence en cinco minutos y se vuelve a validar antes de escribir. Los pasos tienen journal
+privado y respaldo local/remoto. Una consulta de recuperación busca el destino original sin
+repetir automáticamente una operación que terminó con timeout.
 
-1. **`plan`:** leer modelo/firmware, transporte, versión de la app, rutas, Home actual y presencia
-   de HBC. Mostrar qué cambia, qué necesita root y qué no está acreditado. No escribir ni
-   encender luces. La detección no debería escanear indiscriminadamente otras redes.
-2. **`apply`:** usar una TV seleccionada y emparejada; verificar paquete, respaldar estado propio,
-   instalar y comprobar. Home nativo y privacidad serían etapas opcionales explícitas, cada una
-   con lectura posterior. Un paso fallido no se presenta como instalación completa.
-3. **`restore`:** usar el respaldo de esa TV. Restaurar solo claves propias conservando el mapa
-   actual, retirar únicamente hooks propios y comprobar Home antes de desinstalar. Si cambió
-   algo desde el plan, detener ese paso y mostrar el estado encontrado.
+Puede instalar el IPK público 0.7.5 si la app falta, preparar Home y sus hooks propios, aplicar
+el perfil acotado de privacidad y retirar sólo tres apps LG elegidas. Con 0.7.5 presente omite
+la instalación; otra versión bloquea ese paso hasta resolver preservación de actualizaciones.
+Restaurar no reinstala apps retiradas ni desinstala automáticamente un paquete nuevo.
+[Guía exacta, release fijado, SHA-256 y límites](local-installer.md).
 
-**No son comandos disponibles hoy.** El inventario, build y verificador existentes son partes
-reutilizables; faltan coordinador, transporte público parametrizado, respaldo/restore común y
-pruebas de fallo/actualización. Los scripts privados de nuestra sesión no son un instalador
-redistribuible.
+`scripts/privacy-audit.cjs` continúa siendo un CLI separado de sólo lectura. No instala ni
+modifica ajustes. [Uso](tutorial.md#auditoría-con-root-solo-lectura).
+`scripts/serve.cjs` sirve únicamente la vista previa; el asistente usa `installer/server.cjs`.
 
-Sí hay un primer componente público de diagnóstico: `scripts/privacy-audit.cjs`, un CLI de solo
-lectura para una TV ya rooteada, con Node 18+ y OpenSSH. Consulta inventario, preferencias y una
-muestra de recursos; no instala ni cambia ajustes. Su existencia no significa que ya estén
-implementados `plan`, `apply` o `restore`. [Uso](tutorial.md#auditoría-con-root-solo-lectura).
+La revisión pasó **401/401 pruebas** y cerró sin P1/P2. En Brave se verificaron `status` y `plan`
+contra la TV y un apply de privacidad idempotente, con respaldo real y snapshot final igual al
+inicial.
+Tras recargar Brave se recuperó el respaldo por `status` y se restauró. Una lectura SSH
+separada confirmó journal `restored` y snapshot completo idéntico al previo. No se aplicaron
+Home, instalación ni bajas; no se probó el IPK público en la TV ni partir de una TV original.
+Usar una instancia por TV: el journal WAL no reemplaza un lock global ni prueba tolerancia a
+pérdida total de alimentación. [Validación y límites](local-installer.md#qué-está-probado-y-qué-falta).
 
-El primer alcance podría limitarse a instalar/actualizar Mi pantalla por Developer Mode en una
-TV ya emparejada. Home con root iría después, al probar reversión y guardia con la app ausente.
-La configuración particular de PicCap/HyperHDR y el mapeo físico WiZ debe conservar su etapa de
-verificación; no se puede copiar el token o la atestación de otro hogar.
+## Qué sigue pendiente
 
-## Si después agregamos la interfaz web
+- Probar cambios desde valores originales y su restore, sin heredar pruebas del camino manual.
+- Ensayar Home, instalación ausente y bajas permitidas, incluidos sus límites de recuperación manual.
+- Probar corte de red, resultados inciertos, reanudación y restauración parcial.
+- Actualizar otra versión preservando configuración privada y roles root existentes.
+- Ampliar la matriz sólo con pruebas por modelo y firmware; el perfil actual es uno solo.
+- Probar Home con app ausente durante boot y restauración física del destino anterior.
+- Diseñar un adaptador de root desde cero; hoy es una etapa manual separada.
 
-El compañero local ejecutaría solo acciones enumeradas; no una shell arbitraria enviada por una
-web. Su control debería estar limitado a loopback, una sesión autenticada y orígenes concretos,
-con mensajes tipados, tokens efímeros y límites de tiempo. Hay que probar acceso de otros sitios,
-reintentos y cancelación antes de ofrecerlo como seguro. No reenviar llaves ni tokens a un
-servidor público ni incluirlos en URLs o logs compartibles.
-
-Puede presentarse como un asistente servido por el propio programa local, evitando depender de
-una web pública para manejar credenciales. El modo distribuido seguiría necesitando firma/hash
-verificable, versiones fijas y un mecanismo de actualización revisable. Esto es diseño propuesto,
-no una garantía implementada.
-
-`scripts/serve.cjs` hoy solo entrega archivos para la vista previa y escucha `127.0.0.1`.
-No tiene autenticación de instalador, API de ejecución ni rutas de apply/restore. **No ampliarlo
-para ejecutar comandos de la TV sin diseñar y revisar antes ese límite de confianza.**
-
-## Qué falta para decir «reproducible»
-
-- Ensayo desde un checkout limpio, sin los archivos privados de nuestra sesión.
-- Matriz pequeña de modelos/firmwares soportados y un resultado claro para los demás.
-- Paquete público sin datos del hogar y hashes de la revisión exacta.
-- Corte de red, fallo del instalador, timeout y actualización con configuración root existente.
-- Restore real, app ausente durante boot y retorno al Home original.
-- UX con control remoto, permisos físicos de emparejamiento y explicación de cada alcance.
-- Prueba del canal web/local en cada browser soportado si se desarrolla esa variante.
-
-Hasta entonces, el [tutorial](tutorial.md) identifica el tramo automático por CLI y el tramo
-manual de root/Home. Es más preciso que anunciar «un clic y listo» con requisitos ocultos.
+El release público 0.7.5 sin configuración del hogar ya está disponible y su SHA-256 queda fijado
+en el motor. Tener ese paquete y las acciones implementadas no demuestra todavía un recorrido
+completo de instalación y restauración sobre una TV original.

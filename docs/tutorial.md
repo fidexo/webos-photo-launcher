@@ -8,6 +8,18 @@ La última versión probada por el dueño es **0.7.4**: confirmó que anda basta
 incorpora el acceso a Homebrew Channel; consultar el README para su estado de instalación.
 Los hashes y mediciones corresponden a versiones concretas, no a cualquier TV.
 
+**Alternativa nueva para root ya disponible:** el [asistente local](local-installer.md) se inicia
+con `npm run setup` y se maneja desde Brave. Su motor implementa plan, aplicación y restauración
+acotada para el perfil exacto de referencia; no obtiene root desde cero. La guía siguiente
+conserva el camino manual con Developer Mode. No mezclar ni repetir ambos sobre una instalación
+existente sin revisar antes qué pasos necesita y qué configuraciones hay que preservar.
+
+El piloto pasó 401 pruebas y se comprobaron status, plan y un apply de privacidad idempotente
+en Brave contra la TV, con respaldo real. Tras recargar, status recuperó el respaldo y restore
+terminó completado; una lectura SSH separada confirmó el snapshot completo igual al inicial.
+Home, instalación y bajas no se aplicaron en esa prueba. No acredita root desde cero ni arranque
+físico con hooks nuevos. [Evidencia exacta](local-installer.md#qué-está-probado-y-qué-falta).
+
 ## 0. Alcance y requisitos
 
 | Objetivo | Requisito | Estado en la TV de referencia |
@@ -25,6 +37,10 @@ Root depende del modelo, board y firmware exactos: no extrapolar esta unidad.
 En la computadora: Git, Node.js con npm y Python. Usamos Node 24 y Python 3.13; el inventario
 requiere Python con `ssl.VERIFY_X509_PARTIAL_CHAIN` y `websockets`. Computadora y TV comparten
 red local. En PowerShell usar `npm.cmd` si bloquea `npm.ps1`.
+
+El piloto de PC requiere Node 18+, OpenSSH, root SSH en puerto 22 y `known_hosts` preparado;
+no necesita Python para iniciarse. Su interfaz local tiene puerto dinámico y no deja un agente
+de instalación permanente en la TV. [Alcance y pasos](local-installer.md).
 
 ## 1. Descargar el proyecto
 
@@ -93,6 +109,16 @@ python scripts/verify_package.py
 `verify_package.py` inspecciona el IPK sin ejecutarlo: ID/versión, estructura, timestamps,
 archivos esperados y coincidencia byte a byte con `dist/` y el servicio. Imprime tamaño y SHA-256.
 No instalar si falla. Esto no prueba permisos ni comportamiento físico de la TV.
+
+### Paquete público fijado para el piloto
+
+El [release v0.7.5](https://github.com/frxnnk/webos-liquid-glass-launcher/releases/tag/v0.7.5)
+contiene un IPK público limpio: **56 archivos, 1.693.134 bytes**, SHA-256
+`35aae8525d754a979ade384ab2c7116641a57ef52cef90a49e41214483be6cdb`.
+No incluye `weather-config.js`, `lights-config.js` ni `screen-config.json`; difiere del paquete
+privado instalado anteriormente. El asistente lo descarga y verifica sólo si la app está
+ausente. No sobrescribe una 0.7.5 existente; actualizar otra versión está bloqueado hasta
+implementar preservación. [Uso y restauración del piloto](local-installer.md).
 
 `dist/` y `artifacts/` están ignorados. Un IPK construido con configuración privada puede
 contenerla: **no subirlo como release público**. En webOS 5 la advertencia sobre `requiredACG`
@@ -292,7 +318,7 @@ inventario, preferencias, memoria, disco y una muestra de CPU de dos segundos; n
 modifica ajustes ni descubre otros equipos. El informe reduce datos del inventario, pero
 mantenerlo privado; en Windows también importan las ACL de la carpeta. Sin `--output` no guarda
 un archivo. No mide FPS, inspecciona tráfico ni demuestra ausencia de telemetría. Es diagnóstico,
-no el futuro instalador `plan/apply/restore`.
+independiente del asistente local con acciones `plan/apply/restore`.
 
 Con root ya configurado, hay un procedimiento separado para los
 [dos permisos de reportes de LG](diagnostic-privacy.md): incluye helper acotado, respaldo,
@@ -314,6 +340,6 @@ Nuvio se obtiene del [repositorio oficial](https://github.com/NuvioMedia/NuvioTV
 verificando compatibilidad y hash del release elegido. No redistribuimos su IPK. Su instalación
 histórica no acredita que siga instalado ni login/reproducción actuales.
 
-- [Automatización: posibilidades del navegador](browser-installer.md).
+- [Asistente local para root existente](local-installer.md) y [límites del navegador](browser-installer.md).
 - [Visión del producto](product-vision.md) y [roadmap](roadmap.md).
 - [Bitácora](what-we-tried.md) y [fuentes](sources.md).

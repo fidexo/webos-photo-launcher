@@ -1,12 +1,20 @@
 # Colores de YouTube y HDMI
 
+**Estado actual comprobado de nuevo el 2026-10-21, con Mi pantalla 0.7.5:** PicCap y
+HyperHDR no aparecen instalados, no hay procesos/listeners de captura y falta
+`screen-config.json` en el servicio. Por lo tanto **la sincronización con video no está
+operativa actualmente**. No se determinó cuándo se perdió esa instalación ni se atribuye
+a la limpieza reciente: sus inventarios previos ya mostraban esas apps ausentes.
+Las pruebas físicas que siguen son históricas. Acompañar fondo conserva su alcance distinto,
+el color de la foto del launcher; no acredita captura de YouTube.
+
 La 0.6.0 habilita **Pantalla completa** solo después de comprobar configuración, atestación
 física y frames frescos de PicCap. La activación y la parada se probaron físicamente el
 2026-10-21 en la TV con las seis lámparas WiZ del living. No es una promesa de captura universal:
 HDMI, contenido protegido, persistencia tras reinicio y el mapeo exacto de cada lámpara siguen
 pendientes.
 
-## Estado comprobado
+## Estado comprobado durante la prueba histórica 0.6.0
 
 - Root persistente con HBC 0.7.3 elevado; SSH root en 22 y sshd de Developer Mode en 9922.
   PicCap 0.5.3 y HyperHDR Loader 22.0.1 instalados en la TV.

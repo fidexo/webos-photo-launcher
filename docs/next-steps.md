@@ -1,8 +1,8 @@
 # Próximos pasos: rendimiento, diseño e instalación
 
-**Revisión: 2026-10-21.** Investigación y propuestas; no se implementaron estas mejoras ni un
-instalador automático ni se cambió la TV en esta ronda. La TV de referencia ya tiene root:
-no corresponde repetirlo.
+**Revisión: 2026-10-21.** Las mejoras de rendimiento y diseño siguen propuestas. El asistente
+local ya tiene un piloto implementado para root existente; no obtiene root desde cero.
+La TV sigue con Mi pantalla 0.7.5, sin nuevo rediseño instalado. No corresponde repetir su root.
 
 ## Primero, medir dónde se pierde tiempo
 
@@ -33,7 +33,8 @@ Estas referencias sirven para tomar decisiones, no para copiar su interfaz compl
 | [Apps de Bang & Olufsen](https://www.bang-olufsen.com/en/int/story/apps) | Controles claros, calma visual y acentos marfil/ámbar para Luces, sin llenar todo de brillos. |
 | [Roon](https://roon.app/en/music) | Jerarquía editorial y carátulas para una futura vista musical de Transitions. |
 
-La propuesta es **composición de Apple TV con la calma de B&O**: menos brillo en los bordes,
+El dueño eligió **Apple TV como dirección principal y rendimiento como prioridad**, con la calma
+de B&O: menos brillo en los bordes,
 radios, tipografía y espaciado consistentes, vidrio más discreto y foco legible. Una vista musical
 sería opcional; no hace falta descargar portadas para abrir un episodio. No hay un rediseño nuevo
 implementado ni medido a partir de estas referencias.
@@ -54,26 +55,32 @@ sería otro experimento, con compatibilidad, gráficos, entrada e instalación p
 atajo respaldado por esa guía. Esta conclusión es una inferencia de compatibilidad, no un A/B
 ejecutado con Flutter en la TV.
 
-## Un wizard local que se maneje desde Brave
+## El piloto local ya existe; el root automático queda pendiente
 
-La opción práctica es un **programa local temporal** que abra Brave y sirva el asistente en
-loopback. El programa habla con la TV; la página presenta decisiones y resultados. Una web
-estática pública no reemplaza SSH, emparejamiento ni los requisitos de un método de root.
+`npm run setup` inicia un **programa local temporal** para manejar desde Brave. Requiere Node
+18+, OpenSSH, root SSH ya configurado y la huella de la TV verificada. El único perfil admitido
+es 49UN7310PSC / 04.64.00 / 5.6.2-21 / K6LP_ATSC_BR. [Guía del piloto](local-installer.md).
 
-La API local tendría acciones cerradas, sesión autenticada, validación de origen y tiempos
+La API local tiene acciones cerradas, sesión autenticada, validación de origen y tiempos
 máximos. Las credenciales quedan en la computadora y no aparecen en URLs, logs compartibles o
 servidores públicos. Al terminar se cierra el compañero local; no exige un servidor permanente.
 
-| Fase propuesta | Alcance | Condición para avanzar |
+| Etapa | Alcance | Estado |
 | --- | --- | --- |
-| 1 | Conectar con una TV ya emparejada, verificar e instalar/actualizar Mi pantalla, preservar configuraciones y auditar RDX sin cambiarlo por defecto. | Paquete y destino comprobados, respaldo privado y lectura posterior. |
-| 2 | Ofrecer Home nativo y su restauración como acciones separadas. | Reversión y fallos parciales probados, conservando los demás defaults y el acceso de recuperación. |
-| 3 | Adaptador de root para una matriz pequeña de modelos y firmware. | Método revisado para esa combinación, verificación física y recuperación definida. Un equipo desconocido no continúa automáticamente. |
+| 1 | Conectar y planificar; instalar el IPK público si falta la app. | Implementado. Omite 0.7.5 existente; actualizar otra versión queda bloqueado hasta preservar configuración. |
+| 2 | Home, perfil de privacidad, tres bajas LG opcionales, respaldo y restauración acotada. | Apply de privacidad idempotente y restore tras recargar probados en TV. Home, instalación y bajas no se aplicaron con el piloto. |
+| 3 | Root desde cero para una combinación comprobada de modelo y firmware. | Pendiente. No hay exploits ni reinicios automáticos en el piloto. |
 
-Cada fase necesita **plan / apply / restore**, un journal de pasos completados y resultados
-leídos después de escribir. Si falla el tercer paso, mostrar los dos aplicados y qué se pudo
-revertir. Cancelar no debe anunciar una TV restaurada sin comprobarlo. El emparejamiento físico
-y la identidad del dispositivo siguen formando parte del proceso.
+El motor tiene **plan / apply / restore**, con journal privado y lectura posterior; son acciones
+de la API, no comandos CLI. El plan vence en cinco minutos. Ante timeout se consulta el estado
+del destino original sin repetir la operación. Restaurar no reinstala apps retiradas ni elimina
+el paquete nuevo: esos pasos son manuales. El root y emparejamiento previos siguen siendo requisitos.
+
+La suite pasó 401 pruebas y la revisión cerró sin P1/P2. `status` y `plan` funcionaron en Brave
+contra la TV; el apply de privacidad creó respaldos reales y conservó el snapshot previo.
+Tras recargar, `status` recuperó el respaldo y restore completó; otra lectura SSH confirmó el
+snapshot completo igual al inicial. Es una prueba sobre ajustes ya apagados, no instalación
+desde cero ni arranque físico con hooks nuevos.
 
 ### Qué aporta SlopBro y qué falta
 
@@ -84,7 +91,8 @@ ejecutado en la TV. No es una página estática universal que pueda rootear cual
 Para integrarlo habría que fijar y comprobar firmware, payloads, versiones y hashes, junto con
 firmas cuando existan, revisar su licencia AGPL y las obligaciones de distribución, y ensayar
 timeout, corte de red y rollback parcial. Root ya existente debe detectarse y reutilizarse.
-No se ejecutó otra vez ni existe todavía ese adaptador. [Evaluación completa](browser-installer.md).
+La investigación upstream produjo un error de firma de Developer Mode y necesitó recuperación
+manual. No se ejecuta otra vez ni existe todavía ese adaptador. [Evaluación completa](browser-installer.md).
 
 ## Funciones que sí aportarían en el uso diario
 

@@ -52,6 +52,17 @@ captura de otras apps requieren root y configuración adicional.
 
 ## Instalar
 
+**Piloto para una TV ya rooteada:** `npm run setup` (`npm.cmd run setup` en PowerShell) inicia un
+asistente local para Brave, limitado al modelo y firmware de referencia. Permite revisar un
+plan y aplicar instalación, Home, privacidad o tres bajas LG opcionales, con respaldo y
+restauración acotada. Requiere SSH root y huella ya verificados; **no obtiene root desde cero**.
+[Requisitos, paquete público, recuperación y pruebas pendientes](docs/local-installer.md).
+
+El piloto pasó **401 pruebas**. En Brave contra la TV se verificaron conexión/plan y aplicación
+idempotente de privacidad, con respaldo real. Tras recargar se recuperó ese respaldo y se
+restauró; otra lectura SSH confirmó el snapshot completo igual al inicial. Home, instalación
+y bajas no se aplicaron con este piloto; root desde cero y arranque físico siguen pendientes.
+
 El [tutorial](docs/tutorial.md) incluye Developer Mode, emparejamiento, configuración, paquetes,
 Home manual, recuperación y desinstalación. Para la parte local:
 
@@ -112,14 +123,16 @@ recuperación y escenas WiZ con confirmación y deshacer. Son propuestas con req
 criterios de aceptación, no funciones anunciadas como terminadas.
 [Visión del producto](docs/product-vision.md) · [Roadmap](docs/roadmap.md).
 
-Una web sola no hace SSH ni garantiza root para cualquier firmware. La propuesta es empezar
-con un instalador local con plan, respaldo, aplicación y reversión; después, si aporta valor,
-ponerle una interfaz en el browser. **Ese autoinstalador todavía no existe.**
-[Comparación de opciones y fuentes primarias](docs/browser-installer.md).
+El piloto local ya tiene interfaz en el browser y motor con plan, respaldo, aplicación y
+restauración. Requiere root existente y admite un único perfil; no es un root universal ni un
+instalador terminado para cualquier LG. La dirección visual elegida es Apple TV, con rendimiento
+como prioridad; la TV sigue con el diseño de 0.7.5.
+[Guía del piloto](docs/local-installer.md) · [límites del navegador](docs/browser-installer.md).
 
 ## Documentación y procedencia
 
 - [Tutorial de principio a fin](docs/tutorial.md).
+- [Asistente local: piloto con root existente](docs/local-installer.md).
 - [Qué falló y cómo se resolvió](docs/what-we-tried.md).
 - [Root y recuperación](docs/root-and-home.md).
 - [Limpieza ejecutada](docs/cleaning.md) y [auditoría de privacidad](docs/privacy-cleanup.md).

@@ -35,7 +35,7 @@ con Codex al fallar la autenticación del delegador; no atribuir a Opus ese camb
 - Explicar los límites de limpiar apps, desactivar promociones y demostrar tráfico saliente.
 - Evaluar instalación desde browser, sin presentar un prototipo como algo implementado.
 - Publicar `privacy-audit.cjs` como diagnóstico CLI de solo lectura con root ya disponible;
-  no instala ni modifica ajustes y no equivale al futuro `plan/apply/restore`.
+  no instala ni modifica ajustes; es independiente del asistente local.
 - Mantenimiento posterior, con la 0.7.5 instalada y sin nuevo IPK: retiradas Apple Music,
   Apple TV, DGO y Star+, todas verificadas como no sistema y removibles. Inventario final
   **117 apps, 104 de sistema y 13 removibles**; los 13 paquetes protegidos siguen presentes.
@@ -43,12 +43,33 @@ con Codex al fallar la autenticación del delegador; no atribuir a Opus ese camb
 
 [Automatización evaluada](browser-installer.md) · [visión del producto](product-vision.md).
 
+## Piloto del asistente local: programa de PC
+
+`npm run setup` ya inicia interfaz y motor local con `status`, `plan`, `apply` y `restore` como
+acciones internas, no flags CLI. Node 18+ y OpenSSH, root previo y huella verificada; admite
+únicamente 49UN7310PSC / 04.64.00 / 5.6.2-21 / K6LP_ATSC_BR. Instala el IPK público si la app
+falta, omite 0.7.5 existente y bloquea actualizar otra versión hasta resolver preservación.
+Home, siete preferencias, dos permisos RDX y tres bajas LG opcionales tienen respaldo y lectura
+posterior. Hay journal local/TV y restauración acotada; reinstalar apps o desinstalar el paquete
+nuevo siguen siendo pasos manuales. Pasaron 401 pruebas y la revisión cerró sin P1/P2; status,
+plan y apply idempotente de privacidad se probaron en Brave contra la TV, con respaldo real.
+Después de recargar se recuperó ese respaldo y se restauró: otra lectura SSH confirmó journal
+`restored` y snapshot completo igual al inicial. Home, instalación y bajas no se aplicaron con
+el piloto; no heredan las pruebas físicas del procedimiento manual. Faltan instalación real
+del IPK público, root desde cero y arranque físico con hooks nuevos.
+[Guía y estado de verificación](local-installer.md).
+
+La TV sigue en 0.7.5. Apple TV es la dirección visual elegida y rendimiento la prioridad para
+una etapa posterior; no se instaló un nuevo diseño. Root desde cero no está automatizado:
+la investigación upstream exigió recuperar manualmente un error de firma de Developer Mode.
+
 ## Prioridad 1: recuperación y mantenimiento verificables
 
 1. Probar restore de Home y la guardia con la app ausente durante un arranque real, con acceso
    SSH y físico de recuperación. No usar el resultado de `app-present` como prueba de ese caso.
 2. Cubrir actualización de IPK con configuración privada y roles ya instalados, fallos de red
-   y rollback parcial. Hoy existe procedimiento manual; no instalador público completo.
+   y rollback parcial. El piloto omite 0.7.5 presente y bloquea actualizar otra versión; la
+   preservación completa de una actualización sigue siendo un procedimiento manual.
 3. Repetir Home desde varias apps, foco posterior, Home repetido/mantenido y otros ciclos de
    standby/Quick Start. La confirmación de YouTube y apagado de 20 s no acredita todos esos casos.
 4. Registrar versiones/hashes de HBC, PicCap e HyperHDR y una matriz limitada de compatibilidad.
@@ -92,13 +113,12 @@ el movimiento llega al detenerse. Animar vidrio durante cada flecha se descartó
 
 ## Prioridad 4: instalación reproducible
 
-Primero un CLI local con **plan / apply / restore**, empezando por instalar y actualizar la app
-en una TV ya emparejada. Es una propuesta, no comandos existentes. Reutilizar build, verificador
-e inventario; faltan transporte público, coordinación, backups y pruebas de fallo/restore.
-
-Después evaluar web + compañero local. Browser-only puede ayudar con guía/configuración y
-quizá SSAP autorizado; no reemplaza SSH ni proporciona root universal. No agregar un endpoint
-público de shell o instalación. [Comparación y fuentes](browser-installer.md).
+Cerrar el piloto local con ensayos de instalación ausente, restore, timeout y recuperación
+en hardware. El programa y la UI ya existen; no equivalen a un instalador terminado para una
+TV original. El paquete público 0.7.5 está publicado, sin configuración del hogar y con hash
+fijado. Actualizaciones entre versiones y un adaptador de root desde cero quedan pendientes.
+Conservar acciones cerradas de loopback; no agregar una shell pública. Browser-only no reemplaza
+SSH ni proporciona root universal. [Comparación y fuentes](browser-installer.md).
 
 ## Funciones para evaluar
 
