@@ -294,6 +294,10 @@ mantenerlo privado; en Windows también importan las ACL de la carpeta. Sin `--o
 un archivo. No mide FPS, inspecciona tráfico ni demuestra ausencia de telemetría. Es diagnóstico,
 no el futuro instalador `plan/apply/restore`.
 
+Con root ya configurado, hay un procedimiento separado para los
+[dos permisos de reportes de LG](diagnostic-privacy.md): incluye helper acotado, respaldo,
+lectura posterior y reversión. No equivale a bloquear todo el tráfico de diagnóstico.
+
 ## 9. Vista previa y siguientes pasos
 
 ```sh

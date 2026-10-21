@@ -1,8 +1,8 @@
 # Privacidad, publicidad y limpieza de LG
 
 Revisión de fuentes del 21 de octubre de 2026 para la **49UN7310PSC, webOS 5.6.2-21**.
-El punto de partida es Mi pantalla **0.7.4**. Esto separa los cambios ya comprobados en esa
-TV de una propuesta de endurecimiento que todavía no se ejecutó.
+La revisión comenzó con Mi pantalla **0.7.4** y se actualizó con mantenimiento sobre **0.7.5**.
+Se separan los cambios comprobados de las propuestas de endurecimiento todavía no aplicadas.
 
 Podemos reducir publicidad, reconocimiento de contenido y conexiones prescindibles.
 No podemos certificar «cero espionaje» por ocultar el Home, apagar una preferencia o resolver
@@ -14,21 +14,26 @@ cuentas, permisos y comunicaciones; reemplazar el launcher no las modifica.
 El historial y la reversión están en [Limpieza](cleaning.md). Hasta esta revisión:
 
 - Se retiraron tres apps removibles: LG Streaming Week, LG Sports Playbook y LG Channels.
+- Después se retiraron Apple Music, Apple TV, DGO y Star+ por selección del dueño; se
+  conservaron las seis apps indicadas y las siete principales/herramientas protegidas.
 - Se comprobaron en `off` `livePlus`, `livePromotion`, `webOSPromotionVideo`, `homePromotion`,
   `screenSaverAd` y `adCookie`. `customizedAd` ya se había leído en `off`.
 - La recomendación personal está desactivada. Los consentimientos completos de ACR,
   reconocimiento de voz y publicidad personalizada no se volvieron a auditar desde su pantalla.
 - Mi pantalla es el destino nativo de Home. El Home de LG sigue instalado como recuperación.
+- Se desactivaron `analyticsLog` y `crashLog` de `rdxd`, con respaldo y lectura posterior.
+  El servicio sigue activo. [Procedimiento, hook y límites](diagnostic-privacy.md).
 - No se instalaron bloqueadores DNS ni se deshabilitaron servicios de anuncios, voz o ThinQ.
   No se hizo una purga general de datos, cachés o registros.
 
 Estos ajustes son evidencia de preferencias concretas. No equivalen a medir qué datos
-envía cada proceso. El inventario posterior a la limpieza conserva 121 apps, incluidas 104
+envía cada proceso. El inventario posterior a ambas rondas conserva 117 apps, incluidas 104
 marcadas por la TV como de sistema; esa marca tampoco demuestra que una app esté ejecutándose.
 
 La lectura nueva de esta revisión volvió a confirmar esos valores, las tres apps ausentes
 y Homebrew Channel 0.7.3. También encontró servicios activos como `remotelogger`, `uploadd`,
-`rdxd`, `voiceconductor` y `voiceinput`: **no se deshabilitaron**. Una muestra breve mostró
+`rdxd`, `voiceconductor` y `voiceinput`: **no se deshabilitaron**. Los dos permisos de
+reportes de `rdxd` se cambiaron por separado, sin reiniciarlo. Una muestra breve mostró
 aproximadamente un núcleo ocupado por `iconnectivity`, sobre cuatro núcleos. Sigue en
 investigación; esa muestra no identifica la causa ni prueba transmisión de datos personales.
 
@@ -125,7 +130,7 @@ Este plan queda **pendiente**; no describe una ejecución terminada.
 | Lote propuesto | Estado y alcance | Se conserva en el primer lote |
 | --- | --- | --- |
 | Revisar consentimientos opcionales | Pendiente: leer y retirar sólo los acuerdos no necesarios para las funciones elegidas | Acuerdos y servicios necesarios para las apps y la tienda |
-| Retirar apps removibles sin uso | Tres LG ya retiradas; otras diez candidatas siguen instaladas | Apps del usuario y herramientas de recuperación |
+| Retirar apps removibles sin uso | Tres LG y cuatro de terceros retiradas; seis candidatas conservadas por selección del dueño | Apps del usuario y herramientas de recuperación |
 | Frenar objetivos de ACR/publicidad | Pendiente: inventariar rutas presentes y aplicar sólo una lista revisada con respaldo | Voz, conectividad, ThinQ, UPnP, Settings, reproducción y DRM |
 | Filtrar endpoints específicos | Pendiente: lista pequeña, prueba por lote y restauración comprobada | SDP, actualizaciones, tienda y resolución normal de DNS |
 | DNS residente, voz y purga | Fuera del primer perfil; no aplicados | No sumar un proxy ni borrar registros al probar el primer lote |

@@ -78,6 +78,12 @@ personalizados, anuncios del salvapantallas y cookies publicitarias. Se mantiene
 LG Streaming Week, LG Sports Playbook y LG Channels. No se apagaron a ciegas servicios del
 sistema ni se purgaron logs. [Acciones y reversión](docs/cleaning.md).
 
+También se retiraron Apple Music, Apple TV, DGO y Star+ por selección del dueño, conservando
+las seis apps que indicó y las herramientas principales: el inventario quedó en 117 apps.
+Los permisos `analyticsLog` y `crashLog` de LG quedaron en `false`, con respaldo y lectura
+posterior. Hay un hook de reaplicación probado manualmente; el arranque físico posterior
+está pendiente. [Helper, procedimiento, límites y reversión](docs/diagnostic-privacy.md).
+
 Auditamos **Life’s Good Without Spying**, la app del catálogo Homebrew. Su versión revisada
 aplica el conjunto de opciones al cambiar un toggle; los defaults incluyen voz y purga.
 No se habilitó. [Código revisado, riesgos concretos y perfil propuesto](docs/privacy-cleanup.md).

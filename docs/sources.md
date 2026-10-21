@@ -107,6 +107,17 @@ a una prueba en 49UN7310PSC con webOS 5.6.2.
 - Release y digest publicado del IPK; consultar metadata no prueba una compilación reproducible:
   https://github.com/lewisdoesstuff/lifesgoodwithoutspying/releases/tag/v0.6.0
 
+## Permisos de reportes de diagnóstico
+
+Implementación de referencia de LG/webOS OSE, commit
+`4abd4093adcc0853ccd3de3882e4b98a9ee15c01`:
+https://github.com/webosose/rdxd/blob/4abd4093adcc0853ccd3de3882e4b98a9ee15c01/src/rdxd/main.cpp
+
+Se revisaron `getLogSettings`, `setLogSettings`, los permisos de reportes y la llamada
+incondicional a `upload_overview()` al iniciar. El firmware de la TV no se considera
+idéntico a OSE. Los métodos y la lectura de los dos permisos sí se probaron en la unidad.
+[Aplicación, evidencia y límites](diagnostic-privacy.md).
+
 ## Marcas
 
 Bedrock Records, YouTube, Spotify, Netflix, Disney+, Nuvio, LG y webOS son marcas de sus dueños. Este proyecto no

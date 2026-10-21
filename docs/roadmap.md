@@ -36,6 +36,9 @@ con Codex al fallar la autenticación del delegador; no atribuir a Opus ese camb
 - Evaluar instalación desde browser, sin presentar un prototipo como algo implementado.
 - Publicar `privacy-audit.cjs` como diagnóstico CLI de solo lectura con root ya disponible;
   no instala ni modifica ajustes y no equivale al futuro `plan/apply/restore`.
+- Mantenimiento posterior, con la 0.7.5 instalada y sin nuevo IPK: retiradas Apple Music,
+  Apple TV, DGO y Star+, todas verificadas como no sistema y removibles. Inventario final
+  **117 apps, 104 de sistema y 13 removibles**; los 13 paquetes protegidos siguen presentes.
 - Registrar comprobaciones finales de la versión exacta en el README.
 
 [Automatización evaluada](browser-installer.md) · [visión del producto](product-vision.md).
@@ -62,9 +65,17 @@ con Codex al fallar la autenticación del delegador; no atribuir a Opus ese camb
   promociones apagados no demuestran «cero datos compartidos»; DNS no identifica por sí solo
   contenido cifrado ni garantiza que una app no use otro canal.
 
-El inventario histórico pasó de 124 a 121 apps al retirar tres removibles de LG. Las diez
-candidatas de terceros no se eliminaron en aquella limpieza. El estado actual y cualquier
-nueva acción deben constar en [limpieza](cleaning.md), con sus lecturas posteriores.
+El inventario pasó de 124 a 121 al retirar tres removibles de LG, y después a **117** al quitar
+Apple Music, Apple TV, DGO y Star+. El dueño eligió conservar Prime Video, Paramount+, HBO Max,
+Movistar TV, Stremio y Twitch; esas seis y las siete apps principales/herramientas protegidas
+quedaron verificadas presentes. Las 104 apps de sistema se conservaron; no se borraron ni
+deshabilitaron servicios ni se modificó el firmware. Esta ronda no cambió la versión 0.7.5 ni
+generó otro IPK. [Procedimiento, respaldo privado y límites de recuperación](cleaning.md).
+
+RDX quedó con `analyticsLog: false` y `crashLog: false`, comprobados después del cambio y con
+respaldo previo. `rdxd` sigue activo, sin reinicio. El hook de persistencia se probó manualmente
+(`already-applied`); falta comprobarlo en un arranque físico. No acredita cero telemetría.
+[Alcance, script y reversión](diagnostic-privacy.md).
 
 ## Prioridad 3: rendimiento percibido y medido
 

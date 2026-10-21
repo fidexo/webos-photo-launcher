@@ -1,8 +1,10 @@
 # Limpieza de la TV
 
-El 21 de octubre de 2026 se retiraron tres apps removibles de LG y se desactivaron cinco
-preferencias de promociones y apertura del Home de LG. Los resultados se comprobaron con
-lecturas posteriores. No se tocaron otras apps ni servicios del sistema.
+El 21 de octubre de 2026 se retiraron tres apps removibles de LG y, en otra ronda con selección
+explícita del dueño, cuatro apps de terceros que no usa. El inventario pasó de **124 a 117 apps**;
+se conservaron las 104 de sistema. Las bajas y la presencia de los paquetes protegidos se
+comprobaron con lecturas posteriores. Los ajustes publicitarios tienen su historial separado
+abajo. No se borraron ni deshabilitaron servicios del sistema ni se modificó el firmware.
 
 El acceso y el comportamiento de Mi pantalla con Root/Home se documentan por separado en
 [Root y Home](root-and-home.md) y [reemplazo del Home](home-takeover.md).
@@ -12,16 +14,16 @@ El acceso y el comportamiento de Mi pantalla con Root/Home se documentan por sep
 La consulta completa por SSH con root mediante `listApps` devolvió este inventario antes de
 la limpieza:
 
-| Marca informada por la TV | Cantidad previa |
-| --- | --- |
-| Apps totales | 124 |
-| `systemApp: true` | 104 |
-| `removable: true` | 20 |
+| Marca informada por la TV | Inicial | Tras retirar tres LG | Actual |
+| --- | ---: | ---: | ---: |
+| Apps totales | 124 | 121 | 117 |
+| `systemApp: true` | 104 | 104 | 104 |
+| `removable: true` | 20 | 17 | 13 |
 
 La marca `removable` y la selección explícita delimitaron las apps retiradas. El nombre de un
 componente no basta para decidir que se puede borrar.
 
-## Apps retiradas y verificadas
+## Apps LG retiradas y verificadas
 
 | App | ID |
 | --- | --- |
@@ -32,7 +34,37 @@ componente no basta para decidir que se puede borrar.
 Se usó `com.webos.appInstallService/remove`, con el ID de cada app y `subscribe: true`.
 Una consulta posterior a `listApps` confirmó que los tres IDs ya no estaban instalados.
 La aceptación inicial de la solicitud no fue la única comprobación.
-El inventario posterior contiene 121 apps: 104 de sistema y 17 removibles.
+Ese inventario intermedio contenía 121 apps: 104 de sistema y 17 removibles. Los tres IDs
+siguen ausentes en la lectura actual.
+
+## Apps de terceros retiradas por selección del dueño
+
+El dueño pidió conservar Prime Video, Paramount+, HBO Max, Movistar TV, Stremio y Twitch.
+De las diez candidatas de terceros, se retiraron únicamente las otras cuatro:
+
+| App | ID | Versión previa |
+| --- | --- | --- |
+| Apple Music | `com.apple.applemusic` | `0.0.12` |
+| Apple TV | `com.apple.appletv` | `15.1.0` |
+| DGO | `com.directvgo.webostv-rt` | `2.24.1` |
+| Star+ | `com.disney.alch.prod.lrd.app` | `23.12.0` |
+
+Son apps de terceros que podían estar instaladas o venir ofrecidas con la TV; no son servicios
+internos de LG. Que no las use este dueño no las convierte en componentes espía.
+
+La ronda se hizo con Mi pantalla **0.7.5** ya instalada, sin cambiar su versión ni generar otro
+IPK. Este fue el procedimiento:
+
+1. Leer nuevamente `listApps` y resolver los IDs reales de la selección.
+2. Exigir para cada baja `systemApp: false` y `removable: true`; rechazar cualquier coincidencia
+   con los 13 paquetes protegidos.
+3. Guardar inventario y selección previa, con ID, título y versión, en
+   `artifacts/removal-selected-<UTC14>.private.json`, fuera del repositorio público.
+4. Retirar cada ID con `com.webos.appInstallService/remove` y `subscribe: true`.
+5. Volver a leer el inventario y comprobar ausencia de las cuatro, presencia de los 13 protegidos
+   y permanencia de las 104 apps de sistema. Resultado: **117 apps, 13 removibles**.
+
+El respaldo guarda metadata e inventario, no los paquetes IPK ni sesiones recuperables.
 
 ## Preferencias iniciales: historial 0.7.1
 
@@ -53,7 +85,7 @@ valores. Se conserva esa evidencia histórica; no representa todas las lecturas 
 
 Se conservaron `option.quickStartMode: on` y `general.personalRecommend.value: off`, que ya estaban configurados así.
 
-## Lectura y cambios actuales con 0.7.2
+## Historial de ajustes y Home desde 0.7.2
 
 `homeAutoLaunch` se leyó intermedio en `on`, se reaplicó `off` con lectura confirmada y después
 volvió a leerse `on`: **estado final `on`, sin causa aislada**. No se volvió a cambiar. El default
@@ -65,7 +97,7 @@ guardado en el host y en la TV. Los respaldos son privados y no se publican.
 
 El Home nativo ahora usa `general.defaultApps.home: com.frxn.mipantalla`, antes `com.webos.app.fullhome`;
 se conservaron los demás defaults. Esto es selección de destino, no desinstalación de Home LG.
-La 0.7.2 está instalada: verificación original del IPK con 257 pruebas, 57 archivos, 18 del servicio y 1.690.292 bytes;
+La verificación original del IPK 0.7.2 pasó 257 pruebas, con 57 archivos, 18 del servicio y 1.690.292 bytes;
 SHA-256 `61a3deb0458378b0885d65df6d64390e1f8f07b1264fe722aa21add2a22303b7`.
 El dueño confirmó en 0.7.2 Home desde YouTube y encendido tras apagar 20 s directamente en Mi
 pantalla, sin LG primero en esos dos casos. La suite posterior del repositorio pasó 269/269,
@@ -73,31 +105,22 @@ incluidos 12 tests de una guardia externa al IPK. Esa guardia está desplegada y
 con app presente, sin Luna; su fallback en frío con app ausente no se probó físicamente.
 [Estado y reversión de Home](home-takeover.md).
 
-## Apps conservadas
+## Apps conservadas y verificadas
 
-El criterio de conservación incluye Developer Mode, Homebrew Channel, PicCap y HyperHDR, además de las apps del usuario:
-YouTube, Spotify, Nuvio, Netflix, Disney+ y Mi pantalla.
+La comprobación posterior confirmó presentes los 13 paquetes protegidos:
 
-Esta limpieza no solicitó bajas de esos paquetes. El inventario actual no muestra Nuvio ni las
-apps de PicCap/HyperHDR: tampoco aparecían en la lectura previa a retirar las tres apps LG.
-Antes de retomar captura o Nuvio hay que comprobar su instalación y servicios; las pruebas de
-esas funciones documentadas en otras páginas son anteriores a esta limpieza.
+| Grupo | Apps conservadas |
+| --- | --- |
+| Seis elegidas expresamente en esta ronda | Prime Video, Paramount+, HBO Max, Movistar TV, Stremio y Twitch |
+| Siete principales y herramientas | YouTube, Spotify, Netflix, Disney+, Homebrew Channel, Developer Mode y Mi pantalla |
 
-Estas diez candidatas de terceros siguen instaladas; no se borraron:
+Nuvio y las apps de PicCap/HyperHDR no aparecían en el inventario previo ni en la auditoría
+documentada anterior a esta ronda; esta limpieza no solicitó desinstalarlas. Antes de retomar
+esas funciones hay que comprobar su instalación y servicios. Un acceso del dock o una prueba
+histórica de captura no acredita que hoy esté instalado el paquete.
 
-- Prime Video
-- Apple Music
-- Apple TV
-- DGO
-- Star+
-- Paramount+
-- HBO Max
-- Stremio
-- Movistar TV
-- Twitch
-
-No se eliminaron otras apps ni se borraron o deshabilitaron servicios del sistema. Los ajustes de
-promociones anteriores son preferencias; no equivalen a retirar sus componentes del sistema.
+No se eliminaron otras apps ni se borraron o deshabilitaron servicios del sistema. Los ajustes
+de promociones son preferencias; no equivalen a retirar sus componentes del sistema.
 
 ## Cómo revertir
 
@@ -115,9 +138,10 @@ defaults; retirar el marcador `native-home/enabled` y reiniciar solo el watcher 
 **Revertir el default Home antes de desinstalar Mi pantalla**: si apunta a una app ausente, falla
 su apertura. El procedimiento está en [Home](home-takeover.md#desactivar-y-revertir).
 
-Las apps retiradas se reinstalan desde la tienda de LG si siguen disponibles para este modelo y
-región. El respaldo registra cuáles eran; no contiene paquetes ni garantiza recuperar sesiones
-o preferencias de las apps. Puede ser necesario volver a iniciar sesión.
+Las siete apps retiradas se reinstalan desde la tienda de LG si siguen disponibles para este
+modelo y región. Usar el respaldo de la ronda correspondiente para identificar el paquete y la
+versión anterior; no garantiza que esa versión siga ofrecida ni recuperar sesiones o preferencias.
+Puede ser necesario volver a iniciar sesión. No se redistribuyen paquetes de terceros.
 
 ## Alcance del resultado
 
@@ -129,7 +153,7 @@ de publicaciones y adjuntos públicos.
 
 ## Auditoría posterior con 0.7.5
 
-La lectura nueva confirmó 121 apps (104 de sistema, 17 removibles), Homebrew Channel 0.7.3
+La lectura inicial de esta auditoría confirmó 121 apps (104 de sistema, 17 removibles), Homebrew Channel 0.7.3
 y Home nativo propio. Las preferencias de promociones, Live Plus, cookies publicitarias,
 anuncios personalizados y salvapantallas siguen en `off`; `personalRecommend.value` está en
 `off`. `homeAutoLaunch` se conserva en `on`, sin volver a cambiarlo.
@@ -143,5 +167,14 @@ detuvieron servicios en esta ronda.
 El auditor público `scripts/privacy-audit.cjs` se probó por SSH en esta TV. Es de sólo lectura
 y muestra ajustes, inventario resumido y recursos; no constituye un instalador ni certifica
 ausencia de comunicaciones. [Uso](privacy-cleanup.md#auditor-reutilizable-desde-la-computadora).
-Las diez apps de terceros listadas arriba siguen pendientes de selección explícita: no se
-borraron sus datos o sesiones. La 0.7.5 sólo añade el acceso a la tienda y la auditoría local.
+Después el dueño eligió conservar seis de las diez candidatas y se retiraron las otras cuatro,
+como se detalla arriba. La lectura final confirmó **117 apps, 104 de sistema y 13 removibles**,
+con los 13 paquetes protegidos presentes. La app siguió en 0.7.5; esta limpieza fue mantenimiento
+de la TV, separado del IPK del launcher.
+
+También se desactivaron los ajustes RDX `analyticsLog` y `crashLog`, con lectura posterior de
+ambos en `false` y respaldo previo de ambos `true` en
+`/var/lib/mipantalla-maintenance/privacy-rdxd/settings-before.json` (root, modo `600`). `rdxd`
+siguió activo, sin reiniciarlo. El hook `61-mipantalla-privacy-rdxd` se ejecutó manualmente y
+confirmó `already-applied`; su ejecución durante un arranque físico sigue pendiente. Esto no
+demuestra cero telemetría. [Alcance, script y reversión](diagnostic-privacy.md).
