@@ -58,6 +58,8 @@ pública, es una prueba hecha en la TV y así se marca en las otras docs.
 
 ## Transitions
 
+- Ícono de Bedrock Records (desde 0.4.1): símbolo B extraído del SVG de https://bedrock.org.uk/.
+  Se conserva su geometría y se centra y escala para el dock; la marca no está cubierta por la licencia MIT.
 - Playlist oficial del canal de John Digweed (`UCXUO2biGVP7FKCqPEDwmt4w`):
   https://www.youtube.com/playlist?list=PLg-OduiozGBG0JCQlIMTv7Ipz2xZ74y0z
 
@@ -79,5 +81,5 @@ Fuentes fijadas, hallazgos y límites de la revisión: [root-and-home.md](root-a
 
 ## Marcas
 
-YouTube, Spotify, Netflix, Disney+, Nuvio, LG y webOS son marcas de sus dueños. Este proyecto no
+Bedrock Records, YouTube, Spotify, Netflix, Disney+, Nuvio, LG y webOS son marcas de sus dueños. Este proyecto no
 está afiliado a ninguno de ellos.

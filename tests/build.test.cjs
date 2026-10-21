@@ -102,7 +102,7 @@ test('every asset referenced by the app exists locally', () => {
   const references = Array.from(new Set(sources.match(/assets\/[\w/.-]+\.\w+/g) || []));
   assert.ok(references.includes('assets/wallpaper.svg'), 'SVG fallback wallpaper is referenced');
   assert.ok(references.length >= 8, 'fallback wallpaper and seven marks are referenced');
-  assert.ok(references.includes('assets/logos/transitions.svg'), 'Transitions uses its own drawn mark');
+  assert.ok(references.includes('assets/logos/transitions.svg'), 'Transitions references its local icon');
   for (const reference of references) {
     assert.match(reference, /\.(?:svg|jpe?g|webp|png)$/);
     assert.equal(fs.statSync(path.join(root, reference)).isFile(), true, reference);

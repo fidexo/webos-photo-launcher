@@ -9,6 +9,7 @@ las del [tutorial](tutorial.md).
 | --- | --- | --- |
 | 0.2 | Primer diseño Liquid Glass. | Aprobado por el dueño. |
 | 0.3 | Solo íconos, 4 fotos locales rotando, clima de Open-Meteo, Personalizar. | **Verificado en la TV**: instalada y abierta por CLI; el dueño confirmó que le gustó. |
+| 0.4.1 | Ícono de Bedrock Records para Transitions. | Verificado en Brave; 77 pruebas aprobadas, IPK verificado e instalación/apertura aceptadas por CLI. Confirmación visual en TV pendiente. |
 | — | Nuvio oficial 1.2.9 | Instalada, hash verificado, apertura aceptada. Sin probar login ni reproducción. |
 | — | Inventario de apps por SSAP | 124 apps leídas. Ver [cleaning.md](cleaning.md). |
 

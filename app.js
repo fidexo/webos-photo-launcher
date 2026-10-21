@@ -260,7 +260,7 @@
     rows.concat([
       ['Fotos', 'Cada día, una selección de paisajes destacados de Wikimedia Commons; sin conexión, las fotos incluidas.'],
       ['Clima', 'Open-Meteo'],
-      ['Transitions', 'Episodios de la lista oficial de John Digweed en YouTube']
+      ['Transitions', 'Episodios de la lista oficial de John Digweed en YouTube · Ícono: Bedrock Records (bedrock.org.uk).']
     ]).forEach(function (pair) {
       var row = element('p', 'source-row');
       row.appendChild(element('span', 'source-label', pair[0]));

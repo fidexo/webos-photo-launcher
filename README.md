@@ -20,6 +20,9 @@ roadmap: [docs/roadmap.md](docs/roadmap.md) · fuentes: [docs/sources.md](docs/s
 La vista previa 0.4 se verificó en Brave a 1920×1080, 1280×720, 728 y 360 px. La aceptación del
 instalador y del comando de apertura no acredita por sí sola el funcionamiento visual en hardware.
 
+**0.4.1:** ícono de Bedrock para Transitions, revisado en Brave a 1280×720. Pasaron las 77 pruebas
+y la verificación del IPK; instalación y orden de apertura aceptadas por la TV.
+
 ## Selección del usuario
 
 YouTube, Spotify, Nuvio, Netflix, Disney+, Transitions · John Digweed y HDMI 1, en ese orden.
@@ -92,8 +95,9 @@ explica el error. Un error de consulta sigue siendo estado desconocido y no se m
 
 ## Transitions · John Digweed (`transitions.js`)
 
-- Ícono propio (`assets/logos/transitions.svg`): un vinilo con ondas, dibujado para este proyecto; no
-  usa logos de terceros ni retratos. En Personalizar se llama "Transitions · John Digweed".
+- Desde 0.4.1 usa el símbolo **B de Bedrock Records** (`assets/logos/transitions.svg`), tomado del SVG
+  de [la web oficial del sello](https://bedrock.org.uk/), centrado para el dock. La marca pertenece a
+  su titular. En Personalizar se sigue llamando "Transitions · John Digweed".
 - Episodios en `transitions-config.js` (`window.LAUNCHER_TRANSITIONS`), escrito por el proyecto padre
   con los episodios de la lista oficial
   https://www.youtube.com/playlist?list=PLg-OduiozGBG0JCQlIMTv7Ipz2xZ74y0z . Solo se aceptan IDs de 11
