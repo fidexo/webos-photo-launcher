@@ -5,12 +5,12 @@ seis lámparas seleccionadas responden al brillo del 50 %. Ese control manual no
 Después de instalar la 0.5.1, el dueño también confirmó que Acompañar fondo funciona. El primer
 intento no lo mostró; sin un mensaje de error no se atribuye una causa a esa demora.
 
-La 0.6.0 agrega **Revisar captura**, transporte local para el diagnóstico de HyperHDR y una
-sesión de recuperación probada con dobles. Pasaron 206 pruebas y se verificó el paquete de
-52 archivos, incluidos 13 del servicio. El CLI aceptó la instalación y la orden de apertura;
-el usuario comprobó en la TV que Revisar captura informa falta de configuración. No volvió a
-validar los controles manuales ni el fondo en 0.6.0: su confirmación corresponde a 0.5/0.5.1.
-No se ejecutaron root, captura ni HyperHDR reales; root quedó expresamente pospuesto.
+La 0.6.0 agrega **Revisar captura**, transporte local para HyperHDR y **Pantalla completa** con
+frames frescos de PicCap. Esta compilación suma el hook de Home. Pasaron 234 pruebas y se
+verificó el paquete de 56 archivos, incluidos 17 del servicio. La activación física encendió las
+seis lámparas con colores de pantalla y la vuelta a Manual las apagó y restauró; la primera parada
+pidió reintentar. HDMI, contenido protegido y persistencia de Pantalla completa tras reinicio
+siguen pendientes. [Estado de la integración](screen-sync.md).
 
 ## Elegir y controlar las lámparas
 
@@ -43,10 +43,10 @@ manual detiene el acompañamiento; las luces conservan su último estado. Una or
 puede terminar después de detenerlo: detener el motor no revierte una orden física en curso.
 El modo no se reactiva automáticamente después de cerrar por completo o reiniciar la app.
 
-**Pantalla completa** sigue deshabilitado. El canvas del launcher no ve YouTube, Netflix ni
-HDMI. El backend actual rechaza siempre el arranque: no implementa una prueba de imágenes
-frescas ni de hardware. Configurar HyperHDR o verificar su perfil no alcanza para habilitarlo.
-Un color del fondo no acredita sincronización del video.
+**Pantalla completa** se habilita solo con configuración válida, `hardwareVerified` atestiguado y
+dos muestras frescas de PicCap; la activación y la restauración se probaron físicamente. El canvas
+del launcher no ve YouTube, Netflix ni HDMI: la captura la hace PicCap. HDMI, contenido protegido
+y persistencia tras reinicio siguen pendientes. Un color del fondo no acredita video.
 
 **Revisar captura** hace una consulta únicamente al pulsarlo; no hace falta tener lámparas
 marcadas para solicitar el diagnóstico. No activa captura ni cambia la salida de luces. Muestra
@@ -62,9 +62,10 @@ selección local esté vacía. Si falla la parada o la restauración, no se conf
 continúa con la nueva orden. Cerrar el panel u ocultar la app no envía una orden de parada de
 pantalla; Acompañar fondo conserva su pausa al quedar oculto.
 
-Estos contratos se probaron con dobles, incluida la recuperación; la restauración física no
-está validada. El backend actual no permite iniciar una sesión real. El estado y las pruebas
-pendientes están en [Colores de YouTube y HDMI](screen-sync.md).
+Estos contratos se probaron con dobles, incluida la recuperación, y la activación y restauración
+físicas se confirmaron en la TV con las seis lámparas. El backend exige configuración privada,
+`hardwareVerified`, frames frescos de PicCap y permiso de rol; no es un modo universal. El estado
+y las pruebas pendientes están en [Colores de YouTube y HDMI](screen-sync.md).
 
 ## Cómo se comunica
 
@@ -84,8 +85,8 @@ El ejemplo público `screen-config.example.json` viene con `enabled: false` y to
 La configuración privada opcional se lee de
 `services/com.frxn.mipantalla.lights/screen-config.json`, excluido de Git. Sin ese archivo o con
 el diagnóstico deshabilitado no se abre la conexión HyperHDR. Una configuración habilitada no
-anula el bloqueo de captura. La configuración privada puede incluirse en un IPK local y no debe
-publicarse.
+basta: hacen falta `hardwareVerified`, frames frescos de PicCap y permiso de rol hacia su
+servicio. La configuración privada puede incluirse en un IPK local y no debe publicarse.
 
 El protocolo UDP local no incorpora autenticación criptográfica. El control presupone una red
 doméstica de confianza. La comprobación del emisor Luna no protege frente a quien ya tenga root.
@@ -103,10 +104,11 @@ npm exec --yes --package=@webos-tools/cli@3.2.6 -- ares-package dist services/co
 python scripts/verify_package.py
 ```
 
-El verificador compara tanto los archivos de `dist/` como los 13 archivos del servicio; si existe
-`screen-config.json`, también exige que coincida. El IPK 0.6.0 verificado tiene 52 archivos y no
-incluye ese archivo privado opcional. El CLI aceptó la instalación y la orden de apertura;
-la comprobación física de 0.6.0 se limita al diagnóstico de captura sin configurar.
+El verificador compara tanto los archivos de `dist/` como los 17 archivos del servicio; si existe
+`screen-config.json`, también exige que coincida. El IPK 0.6.0 verificado tiene 56 archivos y no
+incluye ese archivo privado opcional. La activación y la restauración de Pantalla completa se
+comprobaron físicamente; el arranque de Home se verificó en frío, mientras que pulsar Home, HDMI,
+standby y persistencia de captura tras reinicio siguen pendientes.
 No publiques un IPK que incluya tu configuración del hogar. El código del servicio solo usa
 módulos de Node disponibles en webOS 5; no agrega dependencias npm.
 

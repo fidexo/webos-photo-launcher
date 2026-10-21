@@ -10,8 +10,14 @@ La 0.4 pasó **77 pruebas**, compilación y verificación del IPK; se instaló y
 apertura en la TV. Falta confirmar visualmente allí las fotos diarias y abrir Transitions desde el
 dock. El enlace al episodio sí se probó por CLI: apareció el selector de perfiles y después el video.
 
-Home sigue abriendo el inicio de LG. No se ejecutó root, no se instalaron hooks de arranque y no se
-borraron apps. La investigación para avanzar está en [Root y Home](docs/root-and-home.md).
+El dueño confirmó físicamente en 0.7.1 que Home desde YouTube termina en Mi pantalla tras esperar
+2 s, y que apagar con el control 20 s y encender vuelve a abrirla sola. Root y HBC
+quedaron persistentes y se instaló el hook de arranque de la fase 1: en un arranque en frío HBC
+ejecutó el watcher y Mi pantalla abrió en primer plano. Faltan el foco, la repetición y otros ciclos de standby.
+Se retiraron tres apps removibles de LG y se desactivaron cinco preferencias de promociones/Home;
+los cambios se comprobaron con lecturas posteriores. [Detalle y reversión](docs/cleaning.md).
+La investigación y las condiciones están en [Root y Home](docs/root-and-home.md)
+y [Home e inicio automático](docs/home-takeover.md).
 
 **Tutorial completo:** [docs/tutorial.md](docs/tutorial.md) · qué probamos y qué falló:
 [docs/what-we-tried.md](docs/what-we-tried.md) · limpieza: [docs/cleaning.md](docs/cleaning.md) ·
@@ -29,16 +35,47 @@ acompañamiento del color del fondo de Mi pantalla: 147 pruebas aprobadas, paque
 verificado, instalación y apertura aceptadas por la TV. El dueño confirmó después que el modo
 de color del fondo funciona. El primer intento no lo mostró; no se obtuvo un error para atribuir
 una causa a esa demora.
-Capturar otras apps o HDMI continúa deshabilitado. [Uso y límites de Luces](docs/lights.md).
+La captura de la interfaz y del video de la TV está verificada; HDMI y el contenido protegido
+siguen pendientes. [Uso y límites de Luces](docs/lights.md).
 
-**0.6.0:** agrega **Revisar captura**, un diagnóstico de solo lectura, transporte autenticado a
-HyperHDR local y una sesión con parada y restauración probadas con dobles. Pasaron **206 pruebas**
-y se verificó el IPK de **52 archivos**, incluidos **13 del servicio**. El CLI aceptó su instalación
-y la orden de apertura; el usuario comprobó en la TV que el diagnóstico informa falta de
-configuración. No volvió a validar los controles manuales ni el fondo en esta versión.
-Esto prepara la integración: el backend rechaza siempre el arranque porque
-todavía no puede verificar imágenes frescas ni el hardware. No se ejecutaron root, captura ni
-HyperHDR reales; el usuario pospuso expresamente root. [Estado de la integración](docs/screen-sync.md).
+**0.6.0:** agrega **Revisar captura**, transporte autenticado a HyperHDR local y el modo
+**Pantalla completa** con comprobación de configuración, atestación física y frames frescos de
+PicCap. Esta compilación incorpora además la fase 1 de **Home**: watcher de la tecla y arranque
+automático mediante HBC. Pasaron **234 pruebas** y se verificó el IPK de **56 archivos**,
+incluidos **17 del servicio**. SHA-256:
+`0886c2610526356342e11cf532a5f4a50f0ce5be6e509cf052075d6f41be722e`.
+Sobre un arranque en frío, HBC ejecutó el hook, abrió Mi pantalla y dejó un solo watcher; con la
+app en primer plano se midieron **60,29 FPS**. Root, PicCap y HyperHDR se ejecutaron en la TV; la
+activación encendió las seis lámparas con colores de pantalla y Manual las apagó y restauró. La
+primera parada pidió reintentar la restauración. La pulsación física de Home ya fue confirmada por
+el dueño; faltan el foco, Home repetido/mantenido, standby, HDMI, contenido protegido y la
+persistencia de Pantalla completa tras reinicio.
+[Estado de captura](docs/screen-sync.md) · [Home](docs/home-takeover.md).
+
+**0.7.0:** optimiza los halos de pantalla completa y hace instantáneas las transiciones de foco
+solo en la TV; conserva el vidrio estático, las fotos, el fundido y el clima. Pasaron **243 pruebas**
+y se verificó el IPK de **56 archivos**, incluidos **17 del servicio**. Instalación y apertura por
+`ares-launch` aceptadas; el watcher registró `boot: accepted`. El dueño confirmó que la navegación
+responde bien. Al apagar con el control durante 20 s y encender, **Mi pantalla no abrió sola**:
+el retorno desde standby de esa versión falló y motivó la corrección 0.7.1, confirmada después para ese caso.
+El watcher corrige la acumulación de falsos gaps, comparte un lanzamiento entre boot/Home/wake
+y reintenta wake solo tras fallo, hasta cuatro intentos; cancela la campaña al recibir aceptación.
+El polling por defecto es 100 ms. Ese ACK no acredita por sí solo visibilidad ni despertar.
+
+En la TV real, Chromium 68 a 1920×1080, una navegación por CDP con flechas cada 120 ms durante
+3,5 s registró 209 intervalos: media **16,7457 ms**, p95 **16,666 ms**, máximo **33,332 ms**,
+uno mayor de 25 ms y p95 del handler **13,7 ms**. Es una muestra acotada, no una prueba con el
+control físico ni una garantía universal. [Evidencia y pendientes de Home](docs/home-takeover.md).
+
+**0.7.1:** instalada por CLI, con watcher PID `13691` y `boot: accepted` en esa comprobación.
+El hijo `luna-send` hacia `getPowerState` con `subscribe: true` es el monitor esperado. El nuevo
+`home-power.js` usa la transición no activo → `Active` para Quick Start, sin depender de que la CPU
+se suspenda: el primer `Active` fija la base, reconecta tras fallo a los 5 s y, mientras está listo,
+inhibe el fallback por gap. Pasaron **254 pruebas**; IPK de **57 archivos**, **18 del servicio**.
+El dueño confirmó físicamente en **0.7.1**: tras apagar 20 s con el control, **abre sola al encender**;
+desde **YouTube → Home**, tras esperar 2 s, termina **en Mi pantalla**. Esto no acredita otros
+ciclos de standby ni ausencia de una aparición inicial del Home de LG. El watcher registra
+`home: accepted` o `home: rejected`. La navegación fluida confirmada es la de 0.7.
 
 ## Selección del usuario
 
@@ -201,7 +238,8 @@ Los IDs de `config.js` coinciden con el inventario real por SSAP de esta TV, inc
 Disney+ y HDMI 1. En otro modelo o región pueden variar; la app consulta `getAppLoadStatus` antes
 de mostrar un estado confirmado.
 Un error o falta de permisos conserva estado desconocido, no lo convierte en app ausente.
-El inventario completo de esta TV (124 apps, por SSAP y solo lectura) está resumido en
+El inventario previo a la limpieza de esta TV (124 apps, consultado por SSAP y después por SSH
+root con `listApps`) está resumido en
 [docs/cleaning.md](docs/cleaning.md); el JSON crudo no se publica.
 
 - https://github.com/NuvioMedia/NuvioTVSmart/blob/main/appinfo.json
@@ -215,15 +253,19 @@ El inventario completo de esta TV (124 apps, por SSAP y solo lectura) está resu
    Developer Mode; falta confirmar sus fotos diarias y Transitions desde el dock en hardware.
 2. Inventario de apps hecho ([docs/cleaning.md](docs/cleaning.md)). Falta confirmar control remoto,
    audio y reproducción.
-3. 0.6.0 empaquetada; instalación y orden de apertura aceptadas por CLI. El usuario comprobó
-   en la TV el diagnóstico de captura sin configurar. Revisar captura no activa sincronización.
-   El usuario pospuso expresamente root; no se ejecutaron root, captura ni HyperHDR reales.
-   Se revisaron fuentes fijadas de SlopBro y Homebrew Channel; [hallazgos y límites](docs/root-and-home.md).
-4. Probar un mecanismo de Home y arranque específico para webOS 5, con desactivación
-   y recuperación verificadas. Esta versión no lo incluye ni afirma que esté validado.
-5. Borrar solo las apps elegidas que LG permita desinstalar por su interfaz: Home,
-   seleccionar app, mantener OK unos 3 segundos, elegir X y confirmar.
-   Primero registrar cuáles se quitarán. No borrar paquetes ni servicios de sistema por SSH.
+3. 0.7.1 instalada, con watcher y monitor de potencia activos; encendido tras 20 s confirmado físicamente.
+   La navegación de 0.7 fue confirmada por el dueño.
+   Root, HBC, PicCap y HyperHDR ya estaban operativos; en 0.6.0 Pantalla completa encendió
+   las seis lámparas y Manual las restauró. La primera parada pidió reintentar. El arranque en
+   frío ejecutó el hook de Home y abrió Mi pantalla. HDMI, contenido protegido y persistencia de
+   Pantalla completa tras reinicio siguen pendientes.
+4. Home: la fase 1 está instalada, el arranque automático se verificó en frío y el dueño confirmó
+   que en 0.7.1 Home desde YouTube termina en Mi pantalla tras 2 s. El encendido después de
+   apagar 20 s con el control también quedó confirmado; en 0.7.0 había fallado. Foco posterior,
+   Home repetido/mantenido y otros ciclos de standby siguen sin comprobación específica.
+5. Limpieza aplicada y verificada: LG Streaming Week, LG Sports Playbook y LG Channels retiradas;
+   cinco preferencias de promociones/Home en `off`. Diez candidatas de terceros siguen instaladas.
+   No se tocaron otras apps ni servicios del sistema. [Respaldo y reversión](docs/cleaning.md).
 
 Nuvio oficial 1.2.9 también se instaló y recibió su orden de apertura. El paquete se verificó contra
 el SHA-256 publicado `895d3e7a884c9fed8162b2a3af96f9ae502a83b33956715ffcbac02ef755d2ac`.
@@ -231,10 +273,9 @@ Esto confirma instalación, no inicio de sesión ni reproducción.
 Fuente: https://github.com/NuvioMedia/NuvioTVSmart/releases/tag/1.2.9 .
 
 El listado de Developer Mode confirma `com.frxn.mipantalla` y `space.nuvio.webos`; no representa
-un inventario completo de las apps de tienda ni del sistema. Para limpieza, recorrer Home y eliminar
-individualmente las apps no usadas que LG permita borrar. En webOS 5, General > Home Settings puede
-ofrecer Home Promotion; desactivarlo reduce promociones del inicio. Home Auto Launch controla el
-Home de LG, no el arranque de nuestra app. Desinstalar libera espacio, sin garantía de más fluidez.
+un inventario completo de las apps de tienda ni del sistema. La limpieza realizada está documentada
+en [cleaning.md](docs/cleaning.md). Home Auto Launch controla el Home de LG, no el arranque de nuestra
+app. Desinstalar puede liberar espacio, sin garantía de más fluidez, RAM o FPS.
 Mantener Developer Mode vigente con EXTEND: al desactivarse se eliminan las apps de desarrollo.
 Guía: https://webostv.developer.lge.com/develop/getting-started/developer-mode-app .
 
@@ -255,11 +296,17 @@ de inicio una vez integrada; no reemplaza toda la interfaz del sistema operativo
 
 ## Alcance
 
-El paquete `.ipk` 0.6.0 se generó con `@webos-tools/cli` 3.2.6 y se verificó contra `dist/` y el
-servicio WiZ: 52 archivos, incluidos 13 del servicio. El CLI aceptó su instalación y la orden de
-apertura; el dueño comprobó el diagnóstico de captura sin configurar. Los controles manuales y
-el fondo tienen confirmación física previa en 0.5.1. El paquete privado y sus configuraciones del
-clima y las lámparas no se publican.
+El paquete `.ipk` 0.7.1 se generó con `@webos-tools/cli` 3.2.6 y se verificó contra `dist/` y el
+servicio WiZ: 57 archivos, incluidos 18 del servicio; 254 pruebas aprobadas. SHA-256:
+`1331e3b7f0684125708544489cab9c0171bf6030421c8250f2b6c5593289045b`. El CLI aceptó su
+instalación; el watcher registró aceptación de boot y su monitor de potencia quedó activo. La activación y
+la restauración de Pantalla completa tienen confirmación física de 0.6.0; los
+controles manuales y el fondo se confirmaron en 0.5.1. El arranque en frío confirmó el hook de
+Home y la apertura de la app; el dueño confirmó que pulsar Home abre Mi pantalla. Foco,
+repetición/mantenimiento y otros ciclos de standby siguen pendientes. En 0.7.1 el dueño confirmó
+encendido tras apagar 20 s con el control y regreso desde YouTube con Home tras 2 s; el primer
+caso había fallado en 0.7.0. El paquete
+privado y sus configuraciones del clima y las lámparas no se publican.
 Esa herramienta no forma parte de la app ni es necesaria para la vista previa.
 Para volver a empaquetar tras cambiar archivos, ejecutar `npm run build` y luego
 `npm exec --yes --package=@webos-tools/cli@3.2.6 -- ares-package dist services/com.frxn.mipantalla.lights -o artifacts --no-minify`.
@@ -267,10 +314,12 @@ Para volver a empaquetar tras cambiar archivos, ejecutar `npm run build` y luego
 La advertencia del CLI sobre `requiredACG` no aplica a webOS 5: LG documenta que
 ACG no está soportado en webOS TV 25 o anteriores:
 https://webostv.developer.lge.com/develop/guides/acg-guide .
-La integración de captura usa únicamente `127.0.0.1:19444`, con autenticación e instancia cero.
-`screen-config.example.json` viene deshabilitado; la configuración opcional privada se lee desde
-`services/com.frxn.mipantalla.lights/screen-config.json`, excluido de Git. Sin configuración no se
-abre esa conexión. Configurar el diagnóstico no elimina el bloqueo de captura ni prueba hardware.
+La integración usa HyperHDR en `127.0.0.1:19444`, con autenticación e instancia cero, y PicCap en
+`127.0.0.1:19400`. `screen-config.example.json` viene deshabilitado; la configuración opcional
+privada se lee desde `services/com.frxn.mipantalla.lights/screen-config.json`, excluido de Git.
+Además del token y el perfil, `hardwareVerified` es una atestación manual tras la prueba física.
+El permiso de rol hacia `org.webosbrew.piccap.service` no forma parte del IPK y debe existir para
+que el probe de frames funcione.
 
 El runtime es HTML/CSS/JavaScript y la biblioteca oficial webOSTV.js 1.2.13 (Apache-2.0).
 No requiere Vercel, servidor propio, cuenta nueva, analytics ni servicios de pago. Conexiones externas:

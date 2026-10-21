@@ -104,7 +104,7 @@ module.exports = function createController(transport, options) {
         return {confirmed:result.devices.length === 1 && result.devices[0].id === id && result.devices[0].confirmed === true};
       });
     }
-  });
+  },{probe:options.screenProbe});
   function stopScreen() { return screen && screen.pending() ? screen.stop() : Promise.resolve({active:false}); }
   function manualState(payload) {
     return Promise.resolve().then(function () {
@@ -122,8 +122,8 @@ module.exports = function createController(transport, options) {
         hardwareVerified:false,framesVerified:false,sourceFreshness:'unknown',reason:'setup-pending'});
     },
     capabilities:function () {
-      return {available:true,screenSync:false,wallpaperSync:false,mode:screen && screen.pending() ? 'screen' : 'manual',
-        reason:'La captura y la sincronización de imagen todavía no están verificadas en esta TV.'};
+      return {available:true,screenSync:!!screen,wallpaperSync:false,mode:screen && screen.pending() ? 'screen' : 'manual',
+        reason:screen ? 'La captura debe revisarse en esta TV antes de activarla.' : 'La captura no está disponible en esta TV.'};
     },
     setMode:function (payload) {
       if (payload && payload.mode === 'manual') return Promise.resolve().then(stopScreen).then(function () { return {mode:'manual'}; });

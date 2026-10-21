@@ -5,10 +5,11 @@ var createRpc = require('./hyperhdr-rpc');
 var createBackend = require('./screen-backend');
 var createSession = require('./screen-session').create;
 var createStore = require('./screen-store');
-module.exports = function createScreenControl(lamps) {
+module.exports = function createScreenControl(lamps, options) {
+  options = options || {};
   var config = loadSettings(path.join(__dirname,'screen-config.json'));
   function read(ids) { return lamps.read({ids:ids}); }
-  var backend = createBackend({config:config,read:read,rpc:{
+  var backend = createBackend({config:config,read:read,probe:options.probe,rpc:{
     connect:function () { return createRpc({token:config.token}).connect(); }
   }});
   var session = createSession({backend:backend,read:read,write:lamps.write,store:createStore()});

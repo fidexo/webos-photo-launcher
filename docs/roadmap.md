@@ -11,37 +11,74 @@ las del [tutorial](tutorial.md).
 | 0.3 | Solo íconos, 4 fotos locales rotando, clima de Open-Meteo, Personalizar. | **Verificado en la TV**: instalada y abierta por CLI; el dueño confirmó que le gustó. |
 | 0.4.1 | Ícono de Bedrock Records para Transitions. | Verificado en Brave; 77 pruebas aprobadas, IPK verificado e instalación/apertura aceptadas por CLI. Confirmación visual en TV pendiente. |
 | 0.5.0 | Panel Luces y servicio local WiZ. | El dueño confirmó lectura y brillo del 50 % en las seis lámparas del living desde la TV. |
-| 0.5.1 | Acompañar el color del fondo de Mi pantalla. | 147 pruebas aprobadas, IPK verificado e instalado; el dueño confirmó que el modo funciona en la TV. Captura completa deshabilitada. |
-| 0.6.0 | Revisar captura, transporte HyperHDR local y sesión de recuperación. | 206 pruebas aprobadas; IPK verificado de 52 archivos, 13 del servicio. Instalación y apertura aceptadas por CLI; el usuario comprobó en TV el diagnóstico de captura sin configurar. Captura completa bloqueada. |
+| 0.5.1 | Acompañar el color del fondo de Mi pantalla. | 147 pruebas aprobadas, IPK verificado e instalado; el dueño confirmó que el modo funciona en la TV. |
+| 0.6.0 | Revisar captura, transporte HyperHDR local, Pantalla completa y fase 1 de Home. | 234 pruebas aprobadas; IPK verificado de 56 archivos, 17 del servicio. Root, PicCap y HyperHDR reales; activación física de las seis lámparas y restauración al volver a Manual. El arranque en frío ejecutó el hook de Home y abrió Mi pantalla; el dueño confirmó después la tecla Home. Foco, repetición, standby, HDMI, contenido protegido y persistencia de Pantalla completa pendientes. |
+| 0.7.0 | Halos de pantalla completa y foco optimizados solo para TV; correcciones del watcher. | 243 pruebas aprobadas; IPK de 56 archivos, 17 del servicio, instalado y abierto por `ares-launch`; watcher con `boot: accepted`. Navegación confirmada por el dueño. El encendido tras apagar 20 s con el control falló; 0.7.1 corrigió ese caso y el dueño lo confirmó después. |
+| 0.7.1 | Monitor LS2 de potencia para Quick Start y diagnóstico de Home. | 254 pruebas aprobadas; IPK verificado de 57 archivos, 18 del servicio, instalado por CLI. Watcher PID 13691 con `boot: accepted` y monitor `luna-send` esperado. El dueño confirmó encendido tras apagar 20 s con el control y YouTube → Home → Mi pantalla tras esperar 2 s. |
 | — | Nuvio oficial 1.2.9 | Instalada, hash verificado, apertura aceptada. Sin probar login ni reproducción. |
-| — | Inventario de apps por SSAP | 124 apps leídas. Ver [cleaning.md](cleaning.md). |
+| — | Inventario y limpieza acotada | Inventario previo de 124 apps; tres apps removibles de LG retiradas y cinco preferencias en `off`, con lectura posterior. Diez candidatas de terceros conservadas. Ver [cleaning.md](cleaning.md). |
 
-El uso, los modos y sus límites están en [Luces WiZ](lights.md). Root, captura de otras apps/HDMI,
-Home, autostart y eliminación de apps siguen pendientes de verificación en hardware.
+El uso, los modos y sus límites están en [Luces WiZ](lights.md). HDMI y contenido protegido siguen
+pendientes. El dueño confirmó previamente que Home abre Mi pantalla; falta revalidar foco y uso
+repetido en la versión actual. El arranque en frío anterior se verificó; el caso de 20 s con el
+control falló en 0.7.0 y quedó confirmado físicamente en 0.7.1. En esta última el dueño también
+confirmó que Home desde YouTube termina en Mi pantalla tras esperar 2 s.
 
-## 0.6: Preparación de captura y recuperación
+## 0.7.1: Quick Start con eventos de potencia
 
-El panel incorpora **Revisar captura**, una consulta de solo lectura que se ejecuta únicamente
-al pulsarla. El adaptador autentica HyperHDR en `127.0.0.1:19444`, confirma la instancia cero y
-comprueba el perfil y las lámparas. El ejemplo `screen-config.example.json` viene deshabilitado;
-la configuración opcional privada `services/com.frxn.mipantalla.lights/screen-config.json` queda
-fuera de Git. Revisar el perfil no habilita la captura.
+`home-power.js` (84 líneas) se suscribe a `tvpower/power/getPowerState` con `subscribe: true`:
+el primer `Active` establece la base y una transición no activo → `Active` solicita wake una vez.
+Reconecta tras fallo a los 5 s; mientras el monitor está listo, inhibe el fallback por gap del
+heartbeat. El dueño confirmó físicamente en 0.7.1 que abre sola tras apagar 20 s con el control
+y encender, y que YouTube → Home termina en Mi pantalla tras esperar 2 s. El hijo `luna-send`
+es esperado, no otro watcher. Home registra aceptación o rechazo sin texto crudo. Estas pruebas
+no acreditan otros ciclos de standby ni ausencia de una aparición inicial del Home de LG.
+SHA-256 del IPK 0.7.1:
+`1331e3b7f0684125708544489cab9c0171bf6030421c8250f2b6c5593289045b`.
 
-La sesión con estado anterior persistido, parada confirmada y restauración está probada con
-dobles. Manual permite recuperar una sesión pendiente aunque no haya selección local guardada;
-un fallo no confirma restauración ni autoriza una nueva escritura. La restauración física todavía
-no fue validada.
+## 0.7: navegación y watcher
 
-Pasaron 206 pruebas y se verificó el IPK de 52 archivos, incluidos 13 del servicio. El CLI aceptó
-la instalación y la orden de apertura. La vista previa se revisó en Brave a 1280×720 y 1920×1080,
-sin desbordes y con el botón visible; no contacta luces reales. El usuario comprobó en la TV que
-Revisar captura informa falta de configuración (`setup-pending`). No volvió a confirmar los
-controles manuales ni el fondo en 0.6.0; su confirmación física corresponde a 0.5/0.5.1.
+Se optimizaron los halos de pantalla completa y las transiciones de foco, instantáneas solo en TV.
+Se conservan el vidrio estático, las fotos, su fundido y el clima. La muestra CDP en la TV real
+(Chromium 68, 1920×1080, flechas cada 120 ms durante 3,5 s) registró 209 intervalos: media
+16,7457 ms, p95 16,666 ms, máximo 33,332 ms, uno mayor de 25 ms; p95 del handler 13,7 ms.
+No equivale a una prueba con control físico ni a una garantía universal. El dueño confirmó que
+la navegación responde bien; la reapertura tras apagar 20 s con el control falló.
 
-El backend actual rechaza **siempre** iniciar pantalla: faltan verificación de imágenes frescas
-y prueba de hardware. No se ejecutaron root, captura ni HyperHDR reales. El usuario pospuso
-expresamente root; esta entrega completa la preparación local, no la sincronización de YouTube
-o HDMI. [Detalles y validación pendiente](screen-sync.md).
+El watcher actualiza la referencia de heartbeat en cada tick para evitar acumular falsos gaps;
+boot, Home y wake comparten un lanzamiento en curso. Wake reintenta solo después de fallo,
+hasta cuatro intentos, y cancela la campaña ante aceptación; polling por defecto de 100 ms.
+La aceptación no acredita app visible ni standby. [Evidencia y pendientes](home-takeover.md).
+SHA-256 del IPK 0.7.0:
+`0e8f831ad05993c56aade1792e920677ced1e173273058c8bd32803feb9393f3`.
+
+## 0.6: Pantalla completa y recuperación
+
+El panel incorpora **Revisar captura**, una consulta que se ejecuta únicamente al pulsarla. El
+adaptador autentica HyperHDR en `127.0.0.1:19444`, confirma la instancia cero y comprueba el
+perfil, las lámparas, la atestación física y dos muestras frescas de PicCap. El ejemplo
+`screen-config.example.json` viene deshabilitado; la configuración opcional privada
+`services/com.frxn.mipantalla.lights/screen-config.json` queda fuera de Git.
+
+`start` guarda el estado anterior, exige frames frescos y `hardwareVerified`, activa `LEDDEVICE`
+y confirma el cambio. Manual apaga la salida y restaura cada lámpara; un fallo conserva la
+recuperación pendiente y un segundo Manual reanuda lo que falta. El servicio necesita permiso de
+rol para consultar `org.webosbrew.piccap.service`; sin él el probe falla cerrado.
+
+Pasaron 234 pruebas y se verificó el IPK de 56 archivos, incluidos 17 del servicio. La activación
+física encendió las seis lámparas con colores de pantalla y la restauración las apagó. La primera
+parada devolvió `SCREEN_RESTORE_PENDING` y el segundo intento confirmó Manual. HDMI, contenido
+protegido, persistencia de Pantalla completa tras reinicio y el mapeo exacto de cada lámpara
+siguen pendientes.
+
+La misma compilación incluye la fase 1 de Home. En un arranque en frío, HBC ejecutó el hook, abrió
+Mi pantalla y dejó un solo watcher; con la app en primer plano se midieron 60,29 FPS. El dueño
+confirmó previamente la tecla Home. Foco y repetición requieren revalidación; el retorno tras
+20 s con el control falló en 0.7.0. [Detalles y límites](home-takeover.md).
+
+El backend exige configuración, atestación física y frames frescos de PicCap antes de encender
+`LEDDEVICE`. Root, captura y HyperHDR se ejecutaron en la TV; la activación y la restauración
+físicas quedaron confirmadas. [Detalles y límites](screen-sync.md).
 
 ## 0.4: Fotos diarias + Transitions (implementado; validación visual en TV pendiente)
 
@@ -115,24 +152,30 @@ El formato `contentId` de Connect SDK abrió YouTube pero no el episodio. Detall
 - [ ] Transitions abre un episodio desde el launcher, no solo desde `ares-launch`.
 - [ ] Sin red, vuelve a las fotos locales.
 
-## Integración con Home sin root (sin probar)
+## Home: fase 1 con root y alternativa sin root
 
-El botón Home sigue abriendo el Home de LG. Lo más cercano sin root es **Quick Access** de LG:
-asignar una app a un número del control.
+La fase 1 está instalada: HBC ejecuta `home-autostart.sh` y el watcher detecta la tecla HOME por
+`/dev/input`. El arranque en frío y la apertura de la app se verificaron, y el dueño confirmó
+Home. Falta revalidar foco y repetición; el retorno tras apagar 20 s con el control falló en
+0.7.0. En 0.7.1 quedaron confirmados físicamente ese encendido y Home desde YouTube, con destino
+final Mi pantalla tras 2 s. [Detalles y reversión](home-takeover.md).
+
+Sin root, lo más cercano sigue siendo **Quick Access** de LG: asignar una app a un número del
+control.
 
 - Abrí Mi pantalla, mantené apretado un número libre del **1 al 8** y confirmá.
 - Mantener apretado el **0** abre el editor de Quick Access para ver o quitar asignaciones.
 
-**No probado con una app de desarrollo en esta TV.** Tampoco configuramos ningún arranque
-automático por lógica propia. Guía de LG:
+**Quick Access no se probó con una app de desarrollo en esta TV.** Es una alternativa sin root;
+el arranque mediante el watcher propio sí está instalado. Guía de LG:
 https://www.lg.com/es/soporte/guias-y-soluciones/television/webos-3-5-funcion-quick-access/ .
 
-## Root (pospuesto por el usuario; no ejecutado)
+## Root (ejecutado y persistente)
 
-El usuario pospuso expresamente root para continuar primero con la integración de colores.
-La autorización anterior no cambia ese estado: no se ejecutaron root, captura ni HyperHDR reales.
-El control WiZ y el fondo propio no requieren root. La integración con Home y arranque exige
-trabajo adicional, explicado en [Root y Home](root-and-home.md).
+Se obtuvo root, se instaló y elevó HBC 0.7.3 y se comprobó un arranque en frío con SSH root en 22,
+sshd de Developer Mode en 9922, hook de Home y Mi pantalla abierta. PicCap y HyperHDR se probaron
+en la TV. La integración de Home y su rollback están en [Home](home-takeover.md); las condiciones
+y riesgos, en [Root y Home](root-and-home.md).
 
 Lo que encontramos:
 
@@ -156,8 +199,10 @@ Lo que encontramos:
 - Su [`luna.js`](https://github.com/gprot42/webos-launch-home/blob/main/src/js/luna.js) activa y
   desactiva el watcher y el arranque. Quitar solo el IPK no elimina toda la persistencia.
 
-Antes de ejecutarlo faltan adaptar y verificar la recuperación y el acceso administrativo. La
-revisión encontró defaults de Telnet y SSH que necesitan cambios; no se ejecutan desde este repo.
+La revisión encontró defaults de Telnet y SSH que necesitaban cambios. En esta instalación se
+mantuvo SSH con clave, se cerró Telnet (`webosbrew_telnet_disabled`) y se verificó el puerto 23
+cerrado tras el arranque. El failsafe de HBC no garantiza una recuperación total; conservar el
+acceso SSH y el rollback del hook.
 
 ## Fuera de alcance
 

@@ -6,10 +6,12 @@ no reemplaza el firmware, no toca el sistema y se puede borrar como cualquier ap
 
 Qué esperar antes de empezar:
 
-- La app se abre desde la lista de apps (o con `ares-launch`). **No reemplaza el botón Home de LG**
-  ni arranca sola al prender la TV. Los menús de imagen y sonido, y la interfaz interna de Netflix,
-  YouTube y demás, siguen siendo los originales.
-- No hay root, ni scripts de arranque, ni apps del sistema borradas.
+- La app se abre desde la lista de apps (o con `ares-launch`). Por sí sola **no reemplaza el botón
+  Home de LG** ni arranca al prender la TV. Los menús de imagen y sonido, y la interfaz interna de
+  Netflix, YouTube y demás, siguen siendo los originales.
+- La app no requiere root. En esta TV de prueba se agregó root/HBC y un hook de Home de fase 1:
+  el arranque en frío se verificó, pero la tecla física, el foco y el standby siguen pendientes.
+  No se borraron apps del sistema.
 - Las apps de Developer Mode se borran solas si la sesión de desarrollador vence (ver paso 1).
 
 Estados que vas a ver en estas docs:
@@ -274,5 +276,5 @@ Igual que Mi pantalla, Nuvio es una app de desarrollo y desaparece si vence Deve
 - [what-we-tried.md](what-we-tried.md): lo que falló, lo que cambiamos y por qué.
 - [cleaning.md](cleaning.md): inventario real de la TV y cómo limpiar sin romper nada.
 - [roadmap.md](roadmap.md): 0.4 (fotos diarias y Transitions) e integración con Home.
-- [root-and-home.md](root-and-home.md): revisión de root y Home, todavía sin ejecutar.
+- [root-and-home.md](root-and-home.md): root/HBC ejecutados, fase 1 de Home y límites.
 - [sources.md](sources.md): todas las fuentes.

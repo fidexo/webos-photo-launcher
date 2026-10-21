@@ -27,9 +27,12 @@ test('screen settings are disabled by default and reject arbitrary endpoints or 
   assert.ok(fs.existsSync(settingsFile),'screen settings loader must exist');
   const load=require(settingsFile);const file=path.join(dir,'screen-config.json');
   assert.equal(load(file).enabled,false);
-  const valid={enabled:true,profile:'Mi pantalla WiZ Living',token:'synthetic-private-token'};
-  fs.writeFileSync(file,JSON.stringify(valid));assert.deepEqual(load(file),valid);
-  for(const invalid of [{...valid,host:'example.org'},{...valid,token:'bad\nkey'},{enabled:'true'},null]){
+    const valid={enabled:true,profile:'Mi pantalla WiZ Living',token:'synthetic-private-token',hardwareVerified:true};
+    fs.writeFileSync(file,JSON.stringify(valid));assert.deepEqual(load(file),valid);
+    fs.writeFileSync(file,JSON.stringify({...valid,hardwareVerified:false}));
+    assert.equal(load(file).hardwareVerified,false);
+    for(const invalid of [{...valid,host:'example.org'},{...valid,token:'bad\nkey'},{...valid,hardwareVerified:'yes'},
+      {enabled:'true'},null]){
     fs.writeFileSync(file,JSON.stringify(invalid));const result=load(file);
     assert.equal(result.enabled,false);assert.equal(result.invalid,true);
     assert.doesNotMatch(JSON.stringify(result),/synthetic|example\.org|bad/);

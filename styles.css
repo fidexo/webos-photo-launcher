@@ -627,6 +627,21 @@ button:disabled { cursor: default; }
   .dock:before { z-index: 1; } /* filo por encima del vidrio de respaldo */
 }
 
+/* Chromium 68 en TV: el foco cambia al instante, sin repintar halos durante las flechas.
+   Se conservan el vidrio estático, las fotos y su fundido; el borde blanco sigue marcando foco. */
+html.is-tv .aura,
+html.is-tv .tile-glow { display: none !important; }
+html.is-tv .tile,
+html.is-tv .tile-glass,
+html.is-tv .tile-tint,
+html.is-tv .tile-ring {
+  -webkit-animation: none !important;
+  animation: none !important;
+  -webkit-transition: none !important;
+  transition: none !important;
+}
+html.is-tv .tile-ring { box-shadow: none !important; }
+
 /* ---------- Modo TV: 16:9, sin scroll, escala proporcional ---------- */
 @media (min-width: 1000px) {
   html { font-size: .833333vw; }

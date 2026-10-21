@@ -218,9 +218,10 @@ Este repo no redistribuye el IPK. Link al release oficial en el [tutorial](tutor
 
 ## Lo que decidimos no hacer
 
-- **Root.** Hay un método listado como compatible con este firmware, pero es una decisión aparte.
-  El dueño lo autorizó si hace falta; no se ejecutó porque las funciones actuales no lo requieren.
-  Ver [root-and-home.md](root-and-home.md) y [roadmap.md](roadmap.md#root-no-ejecutado).
-- **Reemplazar el botón Home o arrancar solo al prender.** Sin root no hay un mecanismo
-  verificado para webOS 5.
+- **Root.** En la etapa 0.4 se dejó como decisión aparte. Después se ejecutó para 0.6 y quedó
+  persistente con HBC; ver [root-and-home.md](root-and-home.md) y
+  [roadmap.md](roadmap.md#root-ejecutado-y-persistente).
+- **Reemplazar el botón Home o arrancar solo al prender.** Sin root no había un mecanismo
+  verificado para webOS 5. Con root se instaló la fase 1: el arranque en frío se verificó y la
+  pulsación física de Home sigue pendiente. Ver [home-takeover.md](home-takeover.md).
 - **Borrar apps.** Hay 13 candidatas, pero no se borró ninguna todavía.

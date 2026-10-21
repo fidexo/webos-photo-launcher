@@ -1,49 +1,127 @@
 # Root, botón Home e inicio automático
 
-Estado al 21 de octubre de 2026: no se ejecutó root en la TV ni se instalaron hooks de Home o de arranque. Se revisaron fuentes y un paquete de Homebrew Channel en el equipo de desarrollo. La autorización para root, arranque y limpieza ya fue otorgada; el control WiZ y el acompañamiento del fondo propio no lo necesitan.
+Estado al 21 de octubre de 2026: root y HBC 0.7.3 quedaron **persistentes** en la TV; el arranque
+en frío se verificó con SSH root en el puerto 22, sshd de Developer Mode en 9922 y el hook de
+Home ejecutando Mi pantalla. El dueño confirmó previamente que la tecla física Home abre la app;
+falta revalidar foco y repetición en la versión actual. En 0.7.0 confirmó buena navegación, pero
+al apagar 20 s con el control y encender **Mi pantalla no abrió sola**. Ese caso de standby falló.
+El dueño confirmó físicamente en 0.7.1 que ahora abre sola tras apagar 20 s con el control, y que
+Home desde YouTube termina en Mi pantalla tras esperar 2 s. Root y HBC ya están hechos: no se repite su proceso.
+Se retiraron tres apps removibles de LG; otras apps y servicios del sistema se conservaron.
 
-Mi Pantalla sigue siendo una aplicación de webOS. Abrir apps, elegir accesos y personalizar su interfaz no reemplaza el sistema operativo, el firmware ni el Home de LG. Instalar nuestra app tampoco hace que arranque sola o capture el botón Home.
+Mi Pantalla sigue siendo una aplicación de webOS. Abrir apps, elegir accesos y personalizar su
+interfaz no reemplaza el sistema operativo, el firmware ni el Home de LG. El hook de fase 1
+observa la tecla y abre Mi pantalla; no captura el Home de LG ni elimina sus promociones.
 
-## Qué se revisó
+La limpieza posterior sí dejó confirmados `general.homeAutoLaunch` y `general.homePromotion` en
+`off`, y `option.livePlus`, `option.livePromotion` y `option.webOSPromotionVideo` en `off`.
+Se conservaron Quick Start y las apps de recuperación. [Cambios y reversión](cleaning.md).
 
-Se leyeron código, scripts e invocaciones y se prepararon variantes locales con pruebas de guardas
-en fixtures. No se ejecutaron exploits ni instaladores en la TV. Las pruebas de fixtures no
-acreditan root, persistencia o recuperación del dispositivo.
+## Qué se revisó y qué se ejecutó
+
+Se leyeron código, scripts e invocaciones de SlopBro, Homebrew Channel y webOS Launch Home. SlopBro
+se usó para obtener root; HBC se instaló, se elevó y se comprobó en un arranque en frío. La
+integración de Home es propia y acotada: no se instalaron los scripts de Launch Home.
 
 | Proyecto | Fuente fijada | Alcance |
 | --- | --- | --- |
 | SlopBro | [`21023d56ca424607bb03d2939609cc658c655fc7`](https://github.com/throwaway96/slopbro/tree/21023d56ca424607bb03d2939609cc658c655fc7) | Cliente, servidor local, página, servicio y script de instalación/elevación. |
 | Homebrew Channel 0.7.3 | [`92fcf9fef7ce08dbeae3b0616df8d0c75c11f0b3`](https://github.com/webosbrew/webos-homebrew-channel/tree/92fcf9fef7ce08dbeae3b0616df8d0c75c11f0b3) | Elevación, startup, actividad persistente, servicio y frontend relevante. |
-| webOS Launch Home | [`dc33d92743830a4df0299e3d898705dbe9b7feae`](https://github.com/gprot42/webos-launch-home/tree/dc33d92743830a4df0299e3d898705dbe9b7feae) | Watcher de Home, lanzamiento al arrancar y scripts para activar/desactivar ambos. |
+| webOS Launch Home | [`dc33d92743830a4df0299e3d898705dbe9b7feae`](https://github.com/gprot42/webos-launch-home/tree/dc33d92743830a4df0299e3d898705dbe9b7feae) | Referencia de watcher y arranque; no se instaló. |
 
-El IPK oficial de HBC 0.7.3 descargado coincidió con el SHA-256 publicado por GitHub:
+El IPK oficial de HBC 0.7.3 coincidió con el SHA-256 publicado por GitHub:
 
 `d10bf3c753551d7c72fb7a92b20fcd2317e502a220ac668ba8e76f6ea78b363c`
 
-Sus scripts de startup, jumpstart y ejecución del servicio coincidieron con la fuente revisada. No se reconstruyeron los binarios ARM ni se verificó reproducibilidad de todo el paquete.
+Sus scripts de startup, jumpstart y ejecución del servicio coincidieron con la fuente revisada. No
+se reconstruyeron los binarios ARM ni se verificó reproducibilidad de todo el paquete.
 
-## Qué requeriría integrar Home y arranque
+## Reparación de Developer Mode
 
-Launch Home requiere HBC elevado para instalar sus hooks. Su watcher espera que el Home de LG aparezca en primer plano, abre el launcher propio, cierra ventanas del Home y vuelve a abrir el launcher para recuperar el foco del control remoto. No reemplaza el sistema operativo ni intercepta directamente la tecla. El orden está documentado para webOS 25 en el [watcher revisado](https://github.com/gprot42/webos-launch-home/blob/dc33d92743830a4df0299e3d898705dbe9b7feae/scripts/home-watcher.sh).
+Durante la recuperación se encontró que el `start-devmode.sh` stock había sido parcheado y su
+firma ya no verificaba. Se restauró el original desde el backup, se comprobó la firma con
+`pub.pem` y se recreó `/var/luna/preferences/devmode_enabled` a partir del token de sesión
+descargado. El `start-devmode.sh` actual tiene SHA-256:
 
-El inicio automático es otro mecanismo: un hook de HBC espera al framework de aplicaciones e intenta abrir el launcher varias veces. El [script de arranque](https://github.com/gprot42/webos-launch-home/blob/dc33d92743830a4df0299e3d898705dbe9b7feae/scripts/boot-launch.sh) no demuestra que funcione al despertar de standby; un arranque completo y Quick Start+ son casos distintos.
+`18b6b7cce77d640fef78d9d247d6fc672b0850bd728dd2a3c44105a485abc846`
 
-Estos scripts tienen fijado el ID de la aplicación de Launch Home. Usarlos con Mi Pantalla requiere una adaptación acotada y su propia revisión. Los hooks persisten fuera del paquete de la app: desinstalar el IPK no constituye una reversión completa. Existen scripts separados para [desactivar el watcher](https://github.com/gprot42/webos-launch-home/blob/dc33d92743830a4df0299e3d898705dbe9b7feae/scripts/disable-home-watcher.sh) y [desactivar el arranque](https://github.com/gprot42/webos-launch-home/blob/dc33d92743830a4df0299e3d898705dbe9b7feae/scripts/disable-boot-launch.sh); su adaptación también debe revisarse.
+No se vuelve a parchear ese archivo: la firma es lo que mantiene Developer Mode. `/media/developer`
+está en una partición ext4 persistente; las apps de desarrollo sobreviven al reinicio mientras
+Developer Mode siga activo. Si Developer Mode se desactiva, el sistema puede borrar ese directorio:
+no es una falla del hook.
 
-El proyecto declara webOS 5.x como **“Expected working”**, con webOS 25 como plataforma principal de prueba. Eso no acredita funcionamiento en nuestra TV. Quedan por probar foco, navegación, regreso desde otras apps, Home repetido, arranque completo, standby y recuperación. [Compatibilidad declarada](https://github.com/gprot42/webos-launch-home/blob/dc33d92743830a4df0299e3d898705dbe9b7feae/README.md#compatibility).
+Las apps HBC y Mi Pantalla se instalaron desde IPK con hashes verificados. Cuando
+`appinstalld` arranca sin Developer Mode, `/dev/install` puede responder
+`Unknown method "install" for category "/dev"`; `systemctl restart appinstalld` lo resuelve sin
+parchear archivos ni firmas.
+
+## Home e inicio automático
+
+La fase 1 usa un watcher propio sobre `/dev/input/event*`, sin registrar otro servicio Luna ni
+modificar roles. HBC ejecuta un symlink de `/var/lib/webosbrew/init.d/` al script del servicio.
+En el arranque en frío del 2026-10-21:
+
+- HBC ejecutó el hook y quedó un solo `home-watch.js --boot --watch --poll-ms=100`.
+- El watcher abrió 9 dispositivos y registró `boot: accepted`.
+- Mi pantalla quedó en primer plano y accesible por CDP; se midieron 60,29 FPS.
+- El consumo del watcher fue de alrededor de 4,4 % de CPU en reposo.
+
+La 0.7.0 quedó instalada, con apertura por `ares-launch` y `boot: accepted` del watcher;
+pasaron 243 pruebas y se verificaron 56 archivos, 17 del servicio. Esos ACK no sustituyen una
+comprobación de visibilidad ni un encendido físico. Una muestra CDP real a 1920×1080 con
+Chromium 68 registró 209 intervalos (p95 16,666 ms); el dueño confirmó que navega bien.
+Los halos y el foco se optimizaron solo para TV, conservando vidrio estático, fotos, fundido y clima.
+El watcher comparte un lanzamiento entre boot/Home/wake, evita acumular falsos gaps, reintenta
+wake solo tras fallo y cancela ante ACK; polling por defecto de 100 ms. No basta un gap de CPU
+para acreditar un ciclo de encendido con Quick Start.
+
+La 0.7.1 quedó instalada por CLI: 254 pruebas, 57 archivos y 18 del servicio; SHA-256
+`1331e3b7f0684125708544489cab9c0171bf6030421c8250f2b6c5593289045b`.
+En la comprobación quedó el watcher PID 13691 con `boot: accepted` y un hijo `luna-send`
+suscrito a `getPowerState`, esperado como monitor. `home-power.js` usa no activo → `Active`,
+toma el primer `Active` como base y reconecta a los 5 s; mientras está listo, inhibe el fallback
+por gap. El dueño confirmó físicamente que, tras apagar 20 s con el control y encender, abre sola.
+Home añade logs fijos de aceptación/rechazo; desde YouTube el dueño confirmó que, tras esperar
+2 s después de Home, termina en Mi pantalla. La navegación fluida confirmada corresponde a 0.7.
+
+Home tiene confirmación física previa. El foco posterior, Home repetido/mantenido, el standby
+corto/largo y otras variantes de Quick Start+ necesitan comprobaciones específicas. Apagar 20 s
+con el control falló en 0.7.0 y quedó confirmado en 0.7.1, al igual que Home desde YouTube tras 2 s.
+El procedimiento de prueba, el código 773 y el rollback están en
+[Home e inicio automático](home-takeover.md).
 
 ## Hallazgos de seguridad y persistencia
 
-- HBC 0.7.3 abre Telnet root sin autenticación por defecto. El flag normal para deshabilitarlo no se consulta en la rama failsafe, que también abre Telnet. Su startup usa Dropbear sin deshabilitar explícitamente las contraseñas; tener una clave autorizada sólo evita que escriba la contraseña predeterminada. [Startup revisado](https://github.com/webosbrew/webos-homebrew-channel/blob/92fcf9fef7ce08dbeae3b0616df8d0c75c11f0b3/services/startup.sh).
-- La elevación modifica configuración y permisos LS2 de HBC y habilita un servicio con ejecución root amplia. HBC además puede registrar una actividad persistente para ejecutar su startup y los hooks de usuario. Es un cambio de privilegios del dispositivo, con alcance mayor que nuestra interfaz. [Elevación](https://github.com/webosbrew/webos-homebrew-channel/blob/92fcf9fef7ce08dbeae3b0616df8d0c75c11f0b3/services/elevate-service.ts), [servicio y autostart](https://github.com/webosbrew/webos-homebrew-channel/blob/92fcf9fef7ce08dbeae3b0616df8d0c75c11f0b3/services/service.ts).
-- SlopBro descarga HBC sin comprobar su hash. Cambia el estado persistente de Developer Mode y puede renombrar su script de inicio de LG si falla la verificación. No conserva todos los originales ni implementa rollback transaccional. [Autoroot revisado](https://github.com/throwaway96/slopbro/blob/21023d56ca424607bb03d2939609cc658c655fc7/wwwroot/autoroot.sh).
-- El cliente de SlopBro desactiva la verificación del certificado WSS y entrega el payload por HTTP. Su mensaje final sólo confirma solicitudes de archivos; no confirma root, instalación ni persistencia. [Cliente revisado](https://github.com/throwaway96/slopbro/blob/21023d56ca424607bb03d2939609cc658c655fc7/slopbro.py).
-- El failsafe de HBC omite personalizaciones y hooks durante ese startup, pero no deshace la instalación o elevación. En esta versión elimina su propio flag después de una espera. No se verificó un procedimiento completo de unroot para este hardware.
+- HBC 0.7.3 abre Telnet root sin autenticación por defecto. El flag normal para deshabilitarlo no
+  se consulta en la rama failsafe, que también abre Telnet. En esta instalación se creó
+  `/var/luna/preferences/webosbrew_telnet_disabled` y se verificó el puerto 23 cerrado tras el
+  arranque. Mantener esa comprobación después de reinstalar HBC.
+- HBC usa Dropbear sin deshabilitar explícitamente las contraseñas. Se configuró una clave
+  autorizada y se comprobó el acceso root; conservar la clave y el backup de recuperación.
+- La elevación modifica configuración y permisos LS2 de HBC y habilita un servicio con ejecución
+  root amplia. HBC además registra una actividad persistente para ejecutar su startup y los hooks
+  de usuario. Es un cambio de privilegios del dispositivo, con alcance mayor que la interfaz.
+  [Elevación](https://github.com/webosbrew/webos-homebrew-channel/blob/92fcf9fef7ce08dbeae3b0616df8d0c75c11f0b3/services/elevate-service.ts),
+  [servicio y autostart](https://github.com/webosbrew/webos-homebrew-channel/blob/92fcf9fef7ce08dbeae3b0616df8d0c75c11f0b3/services/service.ts).
+- SlopBro descarga HBC sin comprobar su hash. Cambia el estado persistente de Developer Mode y
+  puede renombrar su script de inicio de LG si falla la verificación. No conserva todos los
+  originales ni implementa rollback transaccional.
+  [Autoroot revisado](https://github.com/throwaway96/slopbro/blob/21023d56ca424607bb03d2939609cc658c655fc7/wwwroot/autoroot.sh).
+- El cliente de SlopBro desactiva la verificación del certificado WSS y entrega el payload por
+  HTTP. Su mensaje final solo confirma solicitudes de archivos; no confirma root, instalación ni
+  persistencia. [Cliente revisado](https://github.com/throwaway96/slopbro/blob/21023d56ca424607bb03d2939609cc658c655fc7/slopbro.py).
+- El failsafe de HBC omite personalizaciones y hooks durante ese startup, pero no deshace la
+  instalación o elevación. No se verificó un procedimiento completo de unroot para este hardware.
 
-## Antes de una ejecución futura
+## Recuperación y pendientes
 
-Hace falta confirmar nuevamente la compatibilidad exacta y conservar los paquetes, datos y ajustes necesarios de las apps de desarrollo. También hay que resolver la convivencia con Developer Mode sin perderlas; el propio autoroot exige retirar la app de LG antes de reiniciar cuando la detecta instalada.
+Conservar: acceso SSH root, clave autorizada, backup del estado de la TV y el IPK de HBC. Antes de
+cambiar el hook, retirar solo el symlink y validar el PID del watcher; el rollback está en
+[Home e inicio automático](home-takeover.md). Desinstalar el IPK no retira el hook.
 
-La preparación técnica debe fijar artefactos y hashes, respaldar el estado que se va a modificar y endurecer el acceso remoto **antes del primer startup de HBC**: clave pública, SSH sin contraseñas y sin Telnet abierto, incluida la recuperación. Se preparó una variante local de startup con esas restricciones, todavía sin prueba en la TV. Esto tampoco elimina la confianza que exige el transporte local del exploit.
+Siguen pendientes:
 
-Después se necesita evidencia real de root, acceso de recuperación y persistencia antes de avanzar a Home o arranque. Cada integración deberá tener una forma comprobada de desactivarse y devolver el control al Home de LG. Hasta completar esas pruebas, Home y boot siguen siendo trabajo futuro; la app actual se puede usar sin esos cambios.
+1. Comprobar Home desde otras apps, foco y repetición; YouTube → Home ya termina en Mi pantalla tras 2 s.
+2. Otros ciclos de standby y Quick Start+; el encendido tras apagar 20 s con el control ya está confirmado.
+3. Persistencia de Pantalla completa tras reinicio; HDMI y contenido protegido.
+4. Una prueba de desactivación completa de Home y, si se decide, de unroot.

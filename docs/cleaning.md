@@ -1,42 +1,70 @@
-# Limpiar la TV sin romper nada
+# Limpieza de la TV
 
-La idea era dejar solo las apps que se usan. Antes de borrar algo hacía falta saber qué hay
-instalado y qué se puede quitar sin riesgo. **Hasta ahora no se borró ninguna app.**
+El 21 de octubre de 2026 se retiraron tres apps removibles de LG y se desactivaron cinco
+preferencias de promociones y apertura del Home de LG. Los resultados se comprobaron con
+lecturas posteriores. No se tocaron otras apps ni servicios del sistema.
 
-## Cómo obtuvimos el inventario
+El acceso y el comportamiento de Mi pantalla con Root/Home se documentan por separado en
+[Root y Home](root-and-home.md) y [reemplazo del Home](home-takeover.md).
 
-`ares-install --list` solo muestra las apps de desarrollo, y por SSH el usuario de Developer Mode
-está encerrado en un *chroot*. La lista completa salió del protocolo de control remoto en red de
-LG (SSAP), con `scripts/inventory_tv.py`:
+## Inventario previo
 
-```sh
-python -m pip install websockets
-python scripts/inventory_tv.py --host IP_DE_TU_TV
-```
+La consulta completa por SSH con root mediante `listApps` devolvió este inventario antes de
+la limpieza:
 
-Aceptá el aviso en la TV. El script solo lee la lista y escribe `artifacts/tv-app-inventory.json`
-(en `.gitignore`). Por qué este método y cómo maneja el certificado de la TV:
-[what-we-tried.md](what-we-tried.md#inventario-de-apps).
-
-**No publiques el JSON crudo.** Acá va solo el resumen.
-
-## Lo que hay en esta TV
-
-| | Cantidad |
+| Marca informada por la TV | Cantidad previa |
 | --- | --- |
 | Apps totales | 124 |
-| Con `systemApp: true` | 104 |
-| Con `removable: true` | 20 |
+| `systemApp: true` | 104 |
+| `removable: true` | 20 |
 
-`removable` lo informa la TV. Es la única marca que usamos para decidir qué se puede borrar.
+La marca `removable` y la selección explícita delimitaron las apps retiradas. El nombre de un
+componente no basta para decidir que se puede borrar.
 
-### Se conservan (7 removibles)
+## Apps retiradas y verificadas
 
-YouTube · Spotify · Nuvio · Netflix · Disney+ · Mi pantalla · Developer Mode
+| App | ID |
+| --- | --- |
+| LG Streaming Week | `webos.day` |
+| LG Sports Playbook | `epoxyaisports` |
+| LG Channels | `lgchannels.home` |
 
-Developer Mode tiene que quedar: si se va, se van con ella Mi pantalla y Nuvio.
+Se usó `com.webos.appInstallService/remove`, con el ID de cada app y `subscribe: true`.
+Una consulta posterior a `listApps` confirmó que los tres IDs ya no estaban instalados.
+La aceptación inicial de la solicitud no fue la única comprobación.
+El inventario posterior contiene 121 apps: 104 de sistema y 17 removibles.
 
-### Candidatas a borrar (13, sin borrar)
+## Preferencias aplicadas
+
+Antes de cambiar ajustes se leyeron y guardaron sus valores en
+`artifacts/lg-cleaning-backup.private.json`, junto con los IDs, nombres y versiones de las
+tres apps retiradas. Ese respaldo es privado y no debe publicarse.
+
+Los cambios se aplicaron con `setSystemSettings`; una lectura posterior confirmó estos valores:
+
+| Categoría | Clave | Valor previo guardado | Valor confirmado |
+| --- | --- | --- | --- |
+| `general` | `homeAutoLaunch` | `on` | `off` |
+| `general` | `homePromotion` | `on` | `off` |
+| `option` | `livePlus` | `on` | `off` |
+| `option` | `livePromotion` | `on` | `off` |
+| `option` | `webOSPromotionVideo` | `on` | `off` |
+
+Se conservaron `option.quickStartMode: on` y `general.personalRecommend.value: off`, que ya estaban configurados así.
+Desactivar `homeAutoLaunch` afecta al Home de LG; el arranque y la reapertura de Mi pantalla
+dependen de la configuración descrita en [Root y Home](root-and-home.md).
+
+## Apps conservadas
+
+El criterio de conservación incluye Developer Mode, Homebrew Channel, PicCap y HyperHDR, además de las apps del usuario:
+YouTube, Spotify, Nuvio, Netflix, Disney+ y Mi pantalla.
+
+Esta limpieza no solicitó bajas de esos paquetes. El inventario actual no muestra Nuvio ni las
+apps de PicCap/HyperHDR: tampoco aparecían en la lectura previa a retirar las tres apps LG.
+Antes de retomar captura o Nuvio hay que comprobar su instalación y servicios; las pruebas de
+esas funciones documentadas en otras páginas son anteriores a esta limpieza.
+
+Estas diez candidatas de terceros siguen instaladas; no se borraron:
 
 - Prime Video
 - Apple Music
@@ -45,53 +73,29 @@ Developer Mode tiene que quedar: si se va, se van con ella Mi pantalla y Nuvio.
 - Star+
 - Paramount+
 - HBO Max
-- LG Sports Playbook
 - Stremio
-- LG Channels
 - Movistar TV
 - Twitch
-- LG Streaming Week
 
-Estado: **pendiente de que el dueño elija**. Se pueden borrar todas, algunas o ninguna.
+No se eliminaron otras apps ni se borraron o deshabilitaron servicios del sistema. Los ajustes de
+promociones anteriores son preferencias; no equivalen a retirar sus componentes del sistema.
 
-### No tocar
+## Cómo revertir
 
-Las otras 104 son del sistema (`removable: false`). Entre ellas hay nombres que parecen
-prescindibles, como componentes de publicidad o LivePlus. **No asumas que algo sobra por su nombre
-o porque parece inactivo**: puede ser parte de cómo funciona la TV. No se borra nada del sistema,
-ni por la interfaz ni por SSH.
+Para restaurar preferencias, usar los valores anteriores de
+`artifacts/lg-cleaning-backup.private.json`: aplicar con `setSystemSettings` únicamente las claves
+guardadas dentro de sus categorías `general` y `option`, y comprobar después su lectura.
+En este respaldo las cinco claves tenían valor `on`. No hace falta cambiar `quickStartMode` ni
+`personalRecommend`, porque se conservaron.
 
-## Cómo borrar una app (método de LG)
+Las apps retiradas se reinstalan desde la tienda de LG si siguen disponibles para este modelo y
+región. El respaldo registra cuáles eran; no contiene paquetes ni garantiza recuperar sesiones
+o preferencias de las apps. Puede ser necesario volver a iniciar sesión.
 
-1. Apretá **Home** en el control.
-2. Mové el foco hasta la app.
-3. Mantené **OK** apretado unos 3 segundos hasta que entre en modo edición.
-4. Elegí el ícono de borrar (X o papelera) sobre la app y confirmá.
+## Alcance del resultado
 
-Guía de LG:
-https://www.lg.com/au/support/product-support/troubleshoot/help-library/cs-CT52001891-20154523932778/ .
+La retirada de apps puede liberar almacenamiento. No se midió ni se promete una mejora de RAM,
+FPS o velocidad por esta limpieza. Tampoco se realizó un borrado general de caché o datos.
 
-Antes de borrar, anotá cuáles vas a quitar. Las apps de tienda se pueden volver a
-instalar desde LG Content Store.
-
-## Qué esperar (y qué no)
-
-- **Se pierden sesiones y preferencias** de la app borrada. Si la reinstalás, tenés que volver a
-  iniciar sesión.
-- **Libera almacenamiento**, pero no garantiza que la TV vaya más rápida ni que use menos RAM.
-- **Home Promotion** (General > Home Settings) se puede desactivar para ver menos promociones en el
-  Home de LG. Guía:
-  https://www.lg.com/sg/support/product-support/troubleshoot/help-library/cs-CT52001362-20153529303128LST/ .
-- **Home Auto Launch** controla si se abre el Home de LG al prender. **No tiene que ver con Mi
-  pantalla**: no hace que nuestra app arranque sola.
-- En Developer Mode hay una opción para borrar caché y datos. Afecta a **todas** las apps: es una
-  herramienta de prueba, no de limpieza general.
-
-## Resumen
-
-| Acción | Estado |
-| --- | --- |
-| Inventario completo por SSAP | Hecho, solo lectura |
-| Elegir qué borrar | Pendiente |
-| Borrar candidatas por la interfaz de LG | No hecho |
-| Tocar apps o servicios del sistema | Fuera de alcance |
+El documento no incluye IP, MAC, tokens ni credenciales. Conservar los respaldos privados fuera
+de publicaciones y adjuntos públicos.

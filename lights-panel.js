@@ -18,7 +18,9 @@
     'auth-required': 'la captura necesita autorización.', 'admin-required': 'la captura necesita permisos de administración.',
     'instance-mismatch': 'la instancia de captura no coincide.', 'profile-mismatch': 'el perfil de captura no coincide.',
     'selection-required': 'marcá las lámparas del living.', 'selection-mismatch': 'las lámparas no coinciden con el perfil de captura.',
-    'frames-unverified': 'captura pendiente de verificar en esta TV.', 'output-in-use': 'la salida de luces está en uso.',
+    'frames-unverified': 'captura pendiente de verificar en esta TV.',
+    'hardware-unverified': 'la salida física de esta TV todavía no está verificada.',
+    'output-in-use': 'la salida de luces está en uso.',
     'restore-pending': 'la restauración debe terminar antes de nuevos cambios.', 'busy': 'la captura está ocupada.',
     'protocol-error': 'no se pudo verificar la captura.', 'timeout': 'la captura no respondió a tiempo.'
   };
@@ -74,7 +76,8 @@
     if (screen.active) return 'Activo: captura de pantalla confirmada.';
     if (screen.ready) return 'Preparado: captura verificada; elegí Pantalla completa para activarla.';
     var reason = screen.reason || 'frames-unverified';
-    var label = reason === 'setup-pending' ? 'Preparado' : reason === 'frames-unverified' || reason === 'selection-required' ? 'No verificado' : 'Error';
+    var label = reason === 'setup-pending' ? 'Preparado' :
+      reason === 'frames-unverified' || reason === 'hardware-unverified' || reason === 'selection-required' ? 'No verificado' : 'Error';
     return label + ': ' + SCREEN_REASONS[reason];
   }
 

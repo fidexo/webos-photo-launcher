@@ -2,6 +2,7 @@
   'use strict';
   var defaults = window.LAUNCHER_CONFIG;
   var onTV = !!window.PalmSystem;
+  document.documentElement.classList.toggle('is-tv', onTV);
   var bridge = window.createTVBridge(window.webOS, onTV);
   var storageKey = 'mi-pantalla-layout-v1';
   var items = defaults.map(function (item) { return Object.assign({}, item, { visible: true }); });
@@ -126,7 +127,7 @@
 
   // ---------- Presentación: halo de color del foco ----------
   function setAura(color) {
-    if (!auras.length) return;
+    if (onTV || !auras.length) return;
     var next = activeAura === 0 ? 1 : 0;
     if (!auras[next]) next = 0;
     auras[next].style.background =
@@ -319,7 +320,8 @@
   // ---------- Control remoto ----------
   function moveFocus(key) {
     var scope = editing ? panel : document;
-    var buttons = Array.prototype.slice.call(scope.querySelectorAll('button:not([disabled])')).filter(function (button) {
+    var selector = editing ? 'button:not([disabled])' : '.dock button:not([disabled]), .top-actions button:not([disabled])';
+    var buttons = Array.prototype.slice.call(scope.querySelectorAll(selector)).filter(function (button) {
       return button.getClientRects().length > 0;
     });
     var active = document.activeElement;
@@ -338,7 +340,11 @@
       var cross = key === 'ArrowRight' || key === 'ArrowLeft' ? Math.abs(dy) : Math.abs(dx);
       if (forward > 3 && forward + cross * 4 < score) { best = button; score = forward + cross * 4; }
     });
-    if (best) { best.focus(); best.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+    if (best) {
+      best.focus();
+      // El dock de TV ya entra completo: desplazarlo tras focus fuerza otro layout.
+      if (!onTV || editing || !best.classList.contains('tile')) best.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
   }
   document.addEventListener('keydown', function (event) {
     var key = event.key;

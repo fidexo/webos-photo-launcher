@@ -3,7 +3,8 @@ var protocol = require('./protocol');
 function failure(reason) { var error = Error('No se pudo confirmar la captura.'); error.reason = reason; return error; }
 function base(config) {
   return {configured:config.enabled === true,available:false,ready:false,active:false,
-    configVerified:false,hardwareVerified:false,framesVerified:false,sourceFreshness:'unknown',
+    configVerified:false,hardwareVerified:config.hardwareVerified === true,
+    framesVerified:false,sourceFreshness:'unknown',
     outputEnabled:false,lampCount:0,reason:'setup-pending'};
 }
 function reasonFor(error) {
@@ -79,17 +80,51 @@ module.exports = function createBackend(options) {
   return {
     inspect:function (ids) {
       var status = base(config);
-      return use(function (session) { return check(session,ids); }).then(function (checked) {
+      var checkStatus = use(function (session) { return check(session,ids); }).then(function (checked) {
         status.available = true; status.configVerified = true; status.outputEnabled = checked.outputEnabled;
         status.lampCount = ids.length;
-        status.reason = checked.outputEnabled ? 'output-in-use' : 'frames-unverified';
+      },function (error) { status.reason = reasonFor(error); });
+      var frames = options.probe ? Promise.resolve().then(options.probe).catch(function () {
+        return {framesVerified:false,sourceFreshness:'unknown'};
+      }) : Promise.resolve({framesVerified:false,sourceFreshness:'unknown'});
+      return Promise.all([checkStatus,frames]).then(function (results) {
+        var observed = results[1] || {};
+        status.framesVerified = observed.framesVerified === true;
+        status.sourceFreshness = status.framesVerified ? 'fresh' : 'unknown';
+        if (!status.available || !status.configVerified) return status;
+        if (status.outputEnabled) { status.reason = 'output-in-use'; return status; }
+        if (!status.hardwareVerified) { status.reason = 'hardware-unverified'; return status; }
+        if (!status.framesVerified) { status.reason = 'frames-unverified'; return status; }
+        status.ready = true; status.reason = '';
         return status;
-      },function (error) { status.reason = reasonFor(error); return status; });
+      });
     },
-    start:function () {
-      // TCP serverinfo cannot prove fresh frames. No configuration flag bypasses this gate.
-      var error = Error('La captura de video todavía no está verificada.');
-      error.code = 'SCREEN_FRAMES_UNVERIFIED'; return Promise.reject(error);
+    start:function (ids) {
+      var enabled = false;
+      return use(function (session) {
+        return check(session,ids).then(function (checked) {
+          if (checked.outputEnabled) throw failure('output-in-use');
+          if (config.hardwareVerified !== true) throw failure('hardware-unverified');
+          if (!options.probe) throw failure('frames-unverified');
+          return Promise.resolve().then(options.probe).catch(function () { throw failure('frames-unverified'); });
+        }).then(function (frames) {
+          if (!frames || frames.framesVerified !== true) throw failure('frames-unverified');
+          return session.request({command:'componentstate',componentstate:{component:'LEDDEVICE',state:true}});
+        }).then(function (result) {
+          if (!result || result.success === false) throw failure('protocol-error');
+          enabled = true;
+          return session.request({command:'serverinfo'});
+        }).then(function (result) {
+          var info = result.info;
+          var output = info && Array.isArray(info.components) && info.components.filter(function (c) { return c.name === 'LEDDEVICE'; })[0];
+          if (!info || info.currentInstance !== 0 || !output || output.enabled !== true) throw failure('protocol-error');
+          return {active:true};
+        }).catch(function (error) {
+          if (!enabled) throw error;
+          return session.request({command:'componentstate',componentstate:{component:'LEDDEVICE',state:false}})
+            .then(function () { throw error; },function () { throw error; });
+        });
+      });
     },
     stop:function (ids) {
       // Called only by the session owner with its persisted original selection.

@@ -5,9 +5,9 @@ const path = require('node:path');
 const file=path.join(__dirname,'../services/com.frxn.mipantalla.lights/controller.js');
 const id='wiz-aabbcc001122';
 const ip=[192,168,50,20].join('.');
-function setup(query, screen) {
+function setup(query, screen, screenProbe) {
   assert.ok(fs.existsSync(file),'WiZ controller must exist');
-  let discoveryCount=0;
+  let discoveryCount=0,factoryOptions;
   const calls=[];
   const transport={discover:async()=>{
     discoveryCount++;
@@ -16,7 +16,9 @@ function setup(query, screen) {
     calls.push({address,method,params});
     return query?query(address,method,params,calls):{mac:id.slice(4),state:true,dimming:40};
   }};
-  return {controller:require(file)(transport,{settle:()=>Promise.resolve(),screenFactory:screen && (()=>screen)}),calls,discoveryCount:()=>discoveryCount};
+  return {controller:require(file)(transport,{settle:()=>Promise.resolve(),screenProbe,
+    screenFactory:screen && ((lamps,options)=>{factoryOptions=options;return screen;})}),calls,
+    discoveryCount:()=>discoveryCount,factoryOptions:()=>factoryOptions};
 }
 
 test('WiZ controller discovers actual devices without selecting or changing any lights',async()=>{
@@ -91,11 +93,17 @@ test('WiZ does not advertise screen synchronization before capture has been veri
   assert.equal((await controller.setMode({mode:'manual',ids:[id]})).mode,'manual');
 });
 
+test('screen probe is handed to the screen backend as its own option',()=>{
+  const probe=async()=>({framesVerified:true});
+  const t=setup(null,{pending:()=>null,status:async()=>({ready:false})},probe);
+  assert.equal(t.factoryOptions().probe,probe);
+});
+
 test('screen status is an explicit read and never changes lamps or claims capture readiness',async()=>{
   let inspected=0;
   const screen={pending:()=>null,status:async ids=>{inspected++;return {ready:false,reason:'setup-pending'};}};
   const t=setup(null,screen);
-  assert.equal(t.controller.capabilities().screenSync,false);assert.equal(inspected,0);
+  assert.equal(t.controller.capabilities().screenSync,true);assert.equal(inspected,0);
   assert.equal((await t.controller.screenStatus({ids:[]})).reason,'setup-pending');
   assert.equal(inspected,1);assert.equal(t.calls.length,0);
 });
