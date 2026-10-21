@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- Marca propia: bolsa de tienda y matraz, sin recursos externos. -->
+  <defs>
+    <linearGradient id="brew" x1="40" y1="65" x2="81" y2="90" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#81f4ec"/>
+      <stop offset="1" stop-color="#8bafff"/>
+    </linearGradient>
+  </defs>
+  <rect x="23" y="32" width="74" height="72" rx="17" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-width="4.5"/>
+  <path d="M43 39V28a17 17 0 0 1 34 0v11" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M53 51h14m-11 0v15L43 85a5 5 0 0 0 4 8h26a5 5 0 0 0 4-8L64 66V51" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m51 78-6 9a2 2 0 0 0 2 3h26a2 2 0 0 0 2-3l-6-9z" fill="url(#brew)"/>
+  <circle cx="57" cy="81" r="2" fill="#ffffff" fill-opacity=".85"/>
+  <circle cx="64" cy="86" r="1.5" fill="#ffffff" fill-opacity=".7"/>
+</svg>

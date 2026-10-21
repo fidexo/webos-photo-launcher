@@ -8,5 +8,6 @@ window.LAUNCHER_CONFIG = [
   { key: 'disney', title: 'Disney+', appId: 'com.disney.disneyplus-prod', logo: 'assets/logos/disney.svg', color: '#1f8cff', tagline: 'Disney, Pixar, Marvel y Star Wars', kind: 'app' },
   // Transitions no es una app: abre un episodio al azar en YouTube; su disponibilidad es la de YouTube.
   { key: 'transitions', title: 'Transitions · John Digweed', appId: 'youtube.leanback.v4', action: 'transitions', logo: 'assets/logos/transitions.svg', color: '#ff9a3c', tagline: 'Un episodio al azar en YouTube', kind: 'app' },
+  { key: 'homebrew', title: 'Homebrew Channel', appId: 'org.webosbrew.hbchannel', logo: 'assets/logos/homebrew.svg', color: '#53d9df', tagline: 'Tienda de apps de la comunidad', kind: 'app' },
   { key: 'hdmi1', title: 'HDMI 1', appId: 'com.webos.app.hdmi1', logo: 'assets/logos/hdmi.svg', color: '#9fb4d6', tagline: 'Entrada externa', kind: 'input' }
 ];

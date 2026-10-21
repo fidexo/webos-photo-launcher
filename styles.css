@@ -215,7 +215,7 @@ button:disabled { cursor: default; }
 .dock {
   display: flex;
   align-items: flex-start;
-  height: 17.3rem;
+  height: 15.55rem;
   padding: 2.4rem 2rem;
   border-radius: 5.3rem; /* concéntrico: radio del ícono (2.9) + margen (2.4) */
 }
@@ -250,7 +250,7 @@ button:disabled { cursor: default; }
   z-index: 1;
   flex: none;
   width: 1px;
-  height: 12.5rem;
+  height: 10.75rem;
   margin: 0 1.25rem;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .32) 30%, rgba(255, 255, 255, .32) 70%, rgba(255, 255, 255, 0));
 }
@@ -258,20 +258,20 @@ button:disabled { cursor: default; }
 .empty-state {
   display: flex;
   align-items: center;
-  height: 12.5rem;
+  height: 10.75rem;
   margin: 0 1.5rem;
   color: var(--text-2);
   font-size: 1.5rem;
 }
 
 /* ---------- Íconos de app ----------
-   Siete accesos (seis apps y HDMI 1): 7 × 14.25 + divisor 2.5 = 102.25rem dentro de los 104 del dock.
-   Con foco (×1.1) el anillo queda a ~0.45rem del ícono vecino. */
+   Ocho accesos: 8 × 12.5 + divisor 2.5 = 102.5rem dentro de los 104 del dock.
+   Se conserva margen para el aro de foco y la elevación del vidrio. */
 .tile {
   --tile-color: #9fb4d6;
   position: relative;
   display: block;
-  width: 14.25rem;
+  width: 12.5rem;
   padding: 0 .875rem;
   text-align: center;
   -webkit-animation: rise .5s var(--ease) both;
@@ -282,12 +282,13 @@ button:disabled { cursor: default; }
 .tile:nth-child(4) { -webkit-animation-delay: .12s; animation-delay: .12s; }
 .tile:nth-child(5) { -webkit-animation-delay: .16s; animation-delay: .16s; }
 .tile:nth-child(6) { -webkit-animation-delay: .2s; animation-delay: .2s; }
-.dock-inputs .tile { -webkit-animation-delay: .24s; animation-delay: .24s; }
+.tile:nth-child(7) { -webkit-animation-delay: .24s; animation-delay: .24s; }
+.dock-inputs .tile { -webkit-animation-delay: .28s; animation-delay: .28s; }
 .tile-glass {
   position: relative;
   display: block;
-  width: 12.5rem;
-  height: 12.5rem;
+  width: 10.75rem;
+  height: 10.75rem;
   margin: 0 auto;
   border-radius: 2.9rem;
   background: linear-gradient(160deg, rgba(255, 255, 255, .24) 0%, rgba(255, 255, 255, .08) 44%, rgba(255, 255, 255, .04) 62%, rgba(255, 255, 255, .13) 100%);
@@ -349,7 +350,7 @@ button:disabled { cursor: default; }
   top: 0;
   left: -.75rem;
   right: -.75rem;
-  height: 12.5rem;
+  height: 10.75rem;
   background: radial-gradient(ellipse 50% 50% at 50% 50%, var(--tile-color), transparent 100%);
   opacity: 0;
   transition: opacity .3s var(--ease), -webkit-transform .3s var(--spring);
@@ -358,7 +359,7 @@ button:disabled { cursor: default; }
 .tile-note {
   display: none;
   position: absolute;
-  top: 13rem;
+  top: 11.25rem;
   right: 0;
   left: 0;
   overflow: hidden;

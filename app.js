@@ -314,7 +314,7 @@
   document.getElementById('reset-button').addEventListener('click', function () {
     items = defaults.map(function (item) { return Object.assign({}, item, { visible: true }); });
     save(); render(); document.getElementById('reset-button').focus();
-    say('Se restauró tu selección: cinco apps, Transitions y HDMI 1.', 5000);
+    say('Se restauraron los accesos y el orden inicial.', 5000);
   });
 
   // ---------- Control remoto ----------

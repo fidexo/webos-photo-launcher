@@ -9,13 +9,16 @@ El dueño confirmó físicamente en 0.7.1 que ahora abre sola tras apagar 20 s c
 Home desde YouTube termina en Mi pantalla tras esperar 2 s. Root y HBC ya están hechos: no se repite su proceso.
 Se retiraron tres apps removibles de LG; otras apps y servicios del sistema se conservaron.
 
-Mi Pantalla sigue siendo una aplicación de webOS. Abrir apps, elegir accesos y personalizar su
-interfaz no reemplaza el sistema operativo, el firmware ni el Home de LG. El hook de fase 1
-observa la tecla y abre Mi pantalla; no captura el Home de LG ni elimina sus promociones.
+Mi pantalla sigue siendo una aplicación de webOS y no reemplaza el firmware ni los menús
+internos. Desde 0.7.2, `general.defaultApps.home` la selecciona como destino nativo de Home;
+el Home de LG se conserva para recuperación. El detector de teclas de la fase 1 es histórico:
+el watcher actual usa `--native-home`, sin polling de input, y mantiene boot y power/wake.
 
-La limpieza posterior sí dejó confirmados `general.homeAutoLaunch` y `general.homePromotion` en
-`off`, y `option.livePlus`, `option.livePromotion` y `option.webOSPromotionVideo` en `off`.
+La lectura actual confirmó `general.homePromotion: off` y `option.livePlus`, `livePromotion`
+y `webOSPromotionVideo: off`, además de los ajustes publicitarios detallados en limpieza.
+`homeAutoLaunch` volvió a `on` sin causa aislada: no se presenta como desactivado actualmente.
 Se conservaron Quick Start y las apps de recuperación. [Cambios y reversión](cleaning.md).
+La app actual es 0.7.5; el estado de pruebas por versión está en el [README](../README.md).
 
 ## Qué se revisó y qué se ejecutó
 

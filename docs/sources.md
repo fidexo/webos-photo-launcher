@@ -27,6 +27,10 @@ pública, es una prueba hecha en la TV y así se marca en las otras docs.
   https://www.lg.com/sg/support/product-support/troubleshoot/help-library/cs-CT52001362-20153529303128LST/
 - Quick Access:
   https://www.lg.com/es/soporte/guias-y-soluciones/television/webos-3-5-funcion-quick-access/
+- Explicación de LG sobre ACR, voz, anuncios y consentimientos opcionales:
+  https://www.lg.com/global/newsroom/news/statements/statement-understanding-privacy-on-lg-smart-tvs/
+  Es la posición del fabricante; no reemplaza la lectura de los acuerdos de nuestra TV ni
+  una medición independiente de tráfico. Los menús y acuerdos varían por mercado y firmware.
 
 ## Connect SDK y SSAP (inventario y YouTube)
 
@@ -50,7 +54,7 @@ pública, es una prueba hecha en la TV y así se marca en las otras docs.
 
 - Fondos locales: licencia Unsplash, https://unsplash.com/license . Autores y enlaces de cada
   foto en `assets/wallpapers/CREDITS.md`.
-- Fotos diarias (0.4, implementado; prueba visual en TV pendiente):
+- Fotos diarias (implementadas; evolución y pruebas en [rendimiento](performance.md)):
   - Categoría: https://commons.wikimedia.org/wiki/Category:Featured_pictures_of_landscapes
   - https://www.mediawiki.org/wiki/API:Categorymembers
   - https://www.mediawiki.org/wiki/API:Imageinfo
@@ -68,9 +72,10 @@ pública, es una prueba hecha en la TV y así se marca en las otras docs.
 - Release oficial 1.2.9 (IPK y SHA-256): https://github.com/NuvioMedia/NuvioTVSmart/releases/tag/1.2.9
 - Manifiesto con el `appId`: https://github.com/NuvioMedia/NuvioTVSmart/blob/main/appinfo.json
 
-## Root y reemplazo de Home (investigado, no ejecutado)
+## Root y reemplazo de Home
 
 Fuentes fijadas, hallazgos y límites de la revisión: [root-and-home.md](root-and-home.md).
+El estado desplegado y su reversión se documentan en [Home](home-takeover.md).
 
 - Compatibilidad por modelo y firmware: https://cani.rootmy.tv/?q=49UN7310PSC+04.64.00
 - SlopBro: https://github.com/throwaway96/slopbro
@@ -78,6 +83,29 @@ Fuentes fijadas, hallazgos y límites de la revisión: [root-and-home.md](root-a
 - webos-launch-home (requiere root):
   - https://github.com/gprot42/webos-launch-home#compatibility
   - https://github.com/gprot42/webos-launch-home/blob/main/src/js/luna.js
+
+## Privacidad y herramientas Homebrew
+
+Revisión de código del 21 de octubre de 2026, sin instalar el bloqueador ni cambiar servicios:
+[Privacidad y limpieza](privacy-cleanup.md). El requisito de versión del catálogo no equivale
+a una prueba en 49UN7310PSC con webOS 5.6.2.
+
+- Catálogo central Homebrew, commit `291da2bce269fbc901a0716b645caf64f709e3dc`:
+  https://github.com/webosbrew/apps-repo/blob/291da2bce269fbc901a0716b645caf64f709e3dc/packages/ooo.lew.lifesgoodwithoutspying.yml
+- Life's Good Without Spying v0.6.0, commit `0d371db91eb5cc49c8fb645082b44780c644b815`:
+  https://github.com/lewisdoesstuff/lifesgoodwithoutspying/tree/0d371db91eb5cc49c8fb645082b44780c644b815
+- Objetivos, defaults, montajes, restauración y patrones de borrado:
+  https://github.com/lewisdoesstuff/lifesgoodwithoutspying/blob/0d371db91eb5cc49c8fb645082b44780c644b815/app/init/nospy-lib.sh
+- Aplicación y semántica especial de SDP:
+  https://github.com/lewisdoesstuff/lifesgoodwithoutspying/blob/0d371db91eb5cc49c8fb645082b44780c644b815/app/init/nospy-apply.sh
+- Controlador: cambiar un toggle ya ejecuta la aplicación del conjunto:
+  https://github.com/lewisdoesstuff/lifesgoodwithoutspying/blob/0d371db91eb5cc49c8fb645082b44780c644b815/app/init/nospy-ctl.sh
+- Deshacer montajes y reactivar servicios:
+  https://github.com/lewisdoesstuff/lifesgoodwithoutspying/blob/0d371db91eb5cc49c8fb645082b44780c644b815/app/init/nospy-remove.sh
+- Helper DNS opcional, implementación real del desvío IPv4 con `iptables`:
+  https://github.com/lewisdoesstuff/lifesgoodwithoutspying/blob/0d371db91eb5cc49c8fb645082b44780c644b815/dns-filter/scripts/tv-handoff.sh
+- Release y digest publicado del IPK; consultar metadata no prueba una compilación reproducible:
+  https://github.com/lewisdoesstuff/lifesgoodwithoutspying/releases/tag/v0.6.0
 
 ## Marcas
 

@@ -187,3 +187,46 @@ Pasaron **295/295 pruebas**, build, vista previa y verificación del IPK: **57 a
 Se preservaron la configuración privada de captura y el rol del servicio. La lectura posterior
 confirmó Home nativo, watcher sin polling de input, las preferencias publicitarias desactivadas
 y las tres apps LG retiradas todavía ausentes. No se repitió el ciclo físico de encendido/Home.
+
+## 0.7.5: Homebrew y auditoría del sistema
+
+Se añadió el acceso a Homebrew Channel, con ID confirmado en el inventario de la TV, y se ajustó
+el dock para ocho íconos sin scroll. Las elecciones y el orden guardados se conservan. El
+acceso abrió Homebrew Channel en primer plano en hardware; la primera lectura durante la
+apertura devolvió ID vacío y la posterior confirmó `org.webosbrew.hbchannel`. No se instaló
+ninguna app desde la tienda ni se activó su herramienta de limpieza.
+
+En Brave se revisó el dock a 1920×1080 y 1280×720; en la TV, a 1920×1080, los ocho accesos
+quedaron dentro del viewport. La versión instalada registró **209 intervalos** al navegar
+con flechas cada 120 ms durante 3,5 s: media **16,746 ms** (aprox. **59,7 FPS**), p95
+**16,666 ms**, máximo **33,332 ms**, un intervalo mayor de 25 ms y p95 del handler **16,5 ms**.
+Es una muestra por CDP; no prueba todos los ritmos de navegación ni tiempo desde power-on.
+
+### CPU, memoria y almacenamiento
+
+El nuevo [auditor de sólo lectura](../scripts/privacy-audit.cjs) se ejecutó en la TV por SSH
+con verificación de identidad del host. La lectura posterior a instalar 0.7.5 devolvió:
+
+- 121 apps: 104 de sistema y 17 removibles. Las tres LG retiradas seguían ausentes.
+- Homebrew 0.7.3 y Mi pantalla 0.7.5 presentes; Home nativo dirigido a Mi pantalla.
+- Preferencias publicitarias y Live Plus en `off`; Quick Start y `homeAutoLaunch` en `on`.
+- Unos **328 MiB de memoria disponible** y **785 MiB de almacenamiento disponible** en esa
+  muestra. Cambian según las apps abiertas; no son mejoras atribuidas a esta actualización.
+
+Varias muestras breves mostraron `iconnectivity` usando aproximadamente el 25–26 % de toda la
+máquina de cuatro núcleos. Una lectura por hilos encontró el consumo en un hilo llamado `pool`.
+El binario referencia interfaces `ics`; no se identificó la causa de ese consumo, una secuencia
+segura para reiniciarlo ni evidencia de envío de datos personales. **No se
+detuvo ni se deshabilitó.** Es un candidato de diagnóstico, no una mejora ya aplicada ni una
+prueba de espionaje. No se bloquean funciones de red o HDMI sólo por ese consumo.
+
+La auditoría no cambia ajustes, servicios ni paquetes y no mide FPS. El intervalo de CPU es
+aproximado; valida inventario, secuencia completa y coherencia de contadores antes de informar
+resultados. Un fallo no se convierte en «todo limpio». [Privacidad](privacy-cleanup.md).
+
+### Verificación del paquete
+
+Pasaron **306/306 pruebas**, build, vista previa y verificación del IPK: **58 archivos**,
+**18 del servicio**, **1.693.534 bytes**. SHA-256:
+`362c72279a351595750d34de36c336e69ecd10c75bbfa1a99699176aa4b8610a`.
+El auditor CLI queda en el repositorio, fuera del IPK: no añade un servicio residente a la TV.

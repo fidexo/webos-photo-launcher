@@ -6,7 +6,7 @@ pulsar Home abre Mi pantalla; falta revalidar foco y Home repetido/mantenido en 
 La 0.7.0 quedó instalada y el dueño confirmó buena navegación. Al apagar 20 s con el control y
 encender, **Mi pantalla no abrió sola**. En 0.7.1 el dueño confirmó físicamente que **ahora abre sola**
 en ese caso y que, desde YouTube, Home termina **en Mi pantalla tras esperar 2 s**.
-La versión actual es **0.7.2**, instalada con Home nativo. HOME por entrada de red desde YouTube
+El Home nativo se introdujo en **0.7.2** y se conserva en **0.7.5**, instalada. HOME por entrada de red desde YouTube
 terminó en nuestra app, sin un nuevo `home: detected`; esa prueba solo acredita destino. Después
 el dueño confirmó **Home físico desde YouTube y encendido tras apagar 20 s directamente en Mi
 pantalla, sin LG primero en esos dos casos**. No se extiende a cold boot nuevo, foco o repetición.
@@ -147,8 +147,8 @@ foco, arranque ni standby de la TV.
 
 ## Instalación y activación
 
-El IPK 0.7.2 ya está instalado; root, HBC y el hook ya estaban operativos. No hay que repetir su
-instalación para comprobar esta versión. Como referencia de recuperación, se puede usar el instalador de
+El IPK 0.7.5 está instalado; root, HBC y el hook ya estaban operativos. No hay que repetir root ni HBC
+para comprobar esta versión. Como referencia de recuperación, se puede usar el instalador de
 Developer Mode o `luna-send` en la TV. Si `/dev/install` responde
 `Unknown method "install" for category "/dev"`, reiniciar el instalador después de habilitar
 Developer Mode:

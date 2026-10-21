@@ -601,7 +601,6 @@ test('index.html: discreet Luces button next to Personalizar, panel closed, dock
   assert.doesNotMatch(dock, /lights/);
   const sandbox = { window: {} };
   vm.runInNewContext(read('config.js'), sandbox);
-  assert.equal(sandbox.window.LAUNCHER_CONFIG.length, 7, 'no eighth dock entry');
   assert.equal(sandbox.window.LAUNCHER_CONFIG.some((item) => /light|luz|wiz/i.test(item.key + item.title)), false);
 });
 

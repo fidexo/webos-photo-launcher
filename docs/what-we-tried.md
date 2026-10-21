@@ -9,11 +9,15 @@ cómo quedó en el código. Las etiquetas de estado son las del [tutorial](tutor
 instalar una app que funcione como inicio**, no reemplazar el sistema. El objetivo era una pantalla
 limpia con lo que realmente se usa: YouTube, Spotify, Nuvio, Netflix, Disney+ y HDMI 1.
 
-Lo que no cambia una app de Developer Mode:
+Lo que no cambia una app de Developer Mode por sí sola:
 
 - el botón Home y el encendido siguen abriendo el Home de LG;
 - los menús de imagen, sonido y configuración son los de LG;
 - dentro de Netflix, YouTube, etc., ves la interfaz de cada app.
+
+Después se obtuvo root/HBC y se configuró Home nativo. En 0.7.2 el dueño confirmó Home desde
+YouTube y encendido tras apagar 20 s con el control directos a Mi pantalla. El firmware y los
+menús internos de las apps siguen siendo los de LG y sus proveedores.
 
 ## Diseño: tres iteraciones
 
@@ -207,7 +211,8 @@ Chromium 68), `appId` `space.nuvio.webos`.
 - **No verificamos login ni reproducción.**
 - El paquete incluye su servicio acompañante; no hace falta otro backend.
 
-Este repo no redistribuye el IPK. Link al release oficial en el [tutorial](tutorial.md#10-nuvio-opcional).
+Este repo no redistribuye el IPK. Link al release oficial en el [tutorial](tutorial.md#9-vista-previa-y-siguientes-pasos).
+La instalación histórica no acredita que Nuvio siga instalado en el inventario actual.
 
 ## Empaquetado
 
@@ -216,12 +221,63 @@ Este repo no redistribuye el IPK. Link al release oficial en el [tutorial](tutor
 - `scripts/verify_package.py` revisa el IPK sin ejecutarlo: estructura `ar`, `appinfo.json`,
   timestamps posteriores al año 2000 y que cada archivo sea idéntico al de `dist/`.
 
-## Lo que decidimos no hacer
+## Lo que no se hizo en la primera etapa
 
 - **Root.** En la etapa 0.4 se dejó como decisión aparte. Después se ejecutó para 0.6 y quedó
   persistente con HBC; ver [root-and-home.md](root-and-home.md) y
-  [roadmap.md](roadmap.md#root-ejecutado-y-persistente).
+  [roadmap.md](roadmap.md#entregado).
 - **Reemplazar el botón Home o arrancar solo al prender.** Sin root no había un mecanismo
-  verificado para webOS 5. Con root se instaló la fase 1: el arranque en frío se verificó y la
-  pulsación física de Home sigue pendiente. Ver [home-takeover.md](home-takeover.md).
-- **Borrar apps.** Hay 13 candidatas, pero no se borró ninguna todavía.
+  verificado para webOS 5. Después se instaló la fase 1 y finalmente Home nativo en 0.7.2;
+  los casos físicos confirmados y los pendientes están en [home-takeover.md](home-takeover.md).
+- **Borrar apps.** En 0.4 quedaron trece candidatas. Posteriormente se retiraron tres removibles
+  de LG; las diez candidatas de terceros se conservaron en esa limpieza. No se purgaron las
+  apps de sistema. El estado y las acciones posteriores están en [cleaning.md](cleaning.md).
+
+## Home: por qué cambió el enfoque
+
+El primer watcher observaba dispositivos de entrada y relanzaba la app. Conseguía llegar al
+destino, pero podía verse primero el inicio de LG y el consumo no justificaba conservar polling
+para una tecla que el compositor ya conoce. Antes, en 0.7.0, apagar 20 s con el control no
+relanzaba la app: Quick Start mantenía el proceso vivo y no aparecía el salto de reloj esperado.
+
+La 0.7.1 agregó el monitor real de potencia. La 0.7.2 cambió únicamente
+`general.defaultApps.home`, preservando el mapa, y usó `--native-home`: conserva boot/wake sin
+abrir input. El dueño confirmó los dos casos físicos directos. `homeAutoLaunch` volvió a `on`
+sin causa aislada; no se siguió cambiando para explicar un comportamiento que ya funcionaba.
+La guardia se copió fuera del IPK para intentar recuperar el destino si desaparece la app.
+Su ejecución manual con app presente no prueba el fallback físico durante boot.
+
+## 0.7.3–0.7.4: la foto no tardaba solo por la red
+
+En la referencia se mostraba primero una foto local y después se pedía la del día. La segunda
+ya venía de la caché HTTP en la muestra medida: la secuencia, el decode, el vidrio y el fundido
+también sumaban demora. La 0.7.3 pasó la galería diaria validada al arranque y evitó ese primer
+salto local → remoto. El dueño lo consideró aceptable, pero pidió una imagen inicial inmediata.
+
+La 0.7.4 usa el SVG local ya incluido desde CSS, seguido por un fundido de la foto; prepara el
+vidrio después de presentar la imagen y trabaja directamente sobre una miniatura de 160 px.
+El movimiento de foco continuo tampoco resultó gratis: una variante animada bajó a unos 27 FPS
+y se descartó. El aro quedó inmediato y la elevación espera que el foco se detenga.
+
+El panel Luces recibió un rework con estado conocido/mixto/sin confirmar, brillo, modos y paleta
+separados. Se intentó iniciar Opus, pero el delegador devolvió `Authentication required`; este
+rework se terminó con Codex. Pasaron 295 pruebas y se instaló la versión. El dueño confirmó
+después que anda bastante bien. [Métricas y límites](performance.md#074-fondo-inmediato-foco-y-luces).
+
+## 0.7.5: tienda visible y evaluación de automatización
+
+Se agregó un acceso normal a Homebrew Channel; abrirlo no instala paquetes ni obtiene root.
+La decisión de limpieza no se delega ciegamente a una app de la tienda: hacen falta revisar
+acciones, compatibilidad, respaldo y lectura posterior. Desactivar promociones no demuestra
+que no salga ningún dato por la red. [Revisión de limpieza](cleaning.md).
+
+El tutorial anterior todavía describía el estado 0.4 y confundía limitaciones iniciales con el
+estado actual. Se reescribió separando instalación CLI sin root, Home manual con recuperación y
+captura particular. No se publicaron respaldos privados como si fueran un instalador general.
+
+La propuesta de «hacerlo todo desde una web» se evaluó, **no se implementó**. Browser-only no
+dispone de SSH raw; SSAP, certificados WSS, CORS/CSP y permisos de red local son límites distintos.
+Se compararon guía web, web + compañero local y CLI plan/apply/restore. El primer prototipo
+recomendado es CLI local para una TV ya emparejada. [Análisis y fuentes](browser-installer.md).
+Como primer componente se agregó `scripts/privacy-audit.cjs`: diagnóstico con root ya disponible,
+solo lectura de inventario, ajustes y recursos. No instala ni hace cambios de privacidad.

@@ -126,3 +126,22 @@ FPS o velocidad por esta limpieza. Tampoco se realizó un borrado general de cac
 
 El documento no incluye IP, MAC, tokens ni credenciales. Conservar los respaldos privados fuera
 de publicaciones y adjuntos públicos.
+
+## Auditoría posterior con 0.7.5
+
+La lectura nueva confirmó 121 apps (104 de sistema, 17 removibles), Homebrew Channel 0.7.3
+y Home nativo propio. Las preferencias de promociones, Live Plus, cookies publicitarias,
+anuncios personalizados y salvapantallas siguen en `off`; `personalRecommend.value` está en
+`off`. `homeAutoLaunch` se conserva en `on`, sin volver a cambiarlo.
+
+Se revisó **Life's Good Without Spying** del catálogo Homebrew. No se habilitó: la versión
+revisada aplica el conjunto al cambiar un toggle y sus defaults incluyen voz y purga de
+archivos. El análisis de código, las limitaciones de reversión y el perfil conservador
+propuesto están en [privacidad](privacy-cleanup.md). No se aplicaron bloqueos DNS ni se
+detuvieron servicios en esta ronda.
+
+El auditor público `scripts/privacy-audit.cjs` se probó por SSH en esta TV. Es de sólo lectura
+y muestra ajustes, inventario resumido y recursos; no constituye un instalador ni certifica
+ausencia de comunicaciones. [Uso](privacy-cleanup.md#auditor-reutilizable-desde-la-computadora).
+Las diez apps de terceros listadas arriba siguen pendientes de selección explícita: no se
+borraron sus datos o sesiones. La 0.7.5 sólo añade el acceso a la tienda y la auditoría local.
