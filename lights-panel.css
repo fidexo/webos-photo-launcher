@@ -1,0 +1,145 @@
+/*
+  Luces WiZ — panel del living con el mismo vidrio que Personalizar (styles.css).
+  Chromium 68: sin gap, inset, clamp() ni :focus-visible. En modo TV todo entra en 61rem de alto,
+  sin scroll; la lista de lámparas recorta y se desplaza sola hasta la fila con foco.
+*/
+.is-lights .scrim { display: block; -webkit-animation: fade-in .25s var(--ease) both; animation: fade-in .25s var(--ease) both; }
+.lights-panel {
+  position: absolute;
+  z-index: 6;
+  top: 3.25rem;
+  right: 6rem;
+  bottom: 3.25rem;
+  display: flex;
+  flex-direction: column;
+  width: 74rem;
+  padding: 3rem 3rem 2.6rem;
+  border-radius: 3.5rem;
+  background-color: rgba(14, 18, 38, .88);
+  -webkit-animation: panel-in .36s var(--ease) both;
+  animation: panel-in .36s var(--ease) both;
+}
+.lights-panel > * { position: relative; z-index: 1; }
+.lights-kicker { display: flex; align-items: center; }
+.lights-mark { display: block; width: 1.7rem; height: 1.7rem; margin-right: .6rem; }
+.lights-title { margin: .6rem 0 0; font-size: 3.1rem; font-weight: 700; line-height: 1.05; letter-spacing: -.03em; }
+.lights-summary { overflow: hidden; margin: .9rem 0 0; color: var(--text-2); font-size: 1.25rem; white-space: nowrap; text-overflow: ellipsis; }
+.lights-body { display: flex; flex: 1; min-height: 0; margin-top: 2rem; }
+.lights-lamps { display: flex; flex: none; flex-direction: column; width: 26rem; margin-right: 3rem; }
+.lights-controls { flex: 1; min-width: 0; }
+.lights-label {
+  margin: 0 0 .55rem;
+  color: var(--text-3);
+  font-size: .95rem;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+/* ---------- Lámparas: casillas explícitas, ninguna marcada sola ---------- */
+.lights-list { flex: 1; min-height: 0; overflow: hidden; margin: 0 -.6rem; padding: .3rem .6rem; }
+.lights-empty { margin: .4rem 0 0; color: var(--text-2); font-size: 1.15rem; line-height: 1.4; }
+.lights-device {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 4.4rem;
+  margin-bottom: .5rem;
+  padding: 0 1rem;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, .06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12);
+  text-align: left;
+  transition: -webkit-transform .24s var(--spring);
+  transition: transform .24s var(--spring);
+}
+.lights-check {
+  position: relative;
+  flex: none;
+  width: 1.9rem;
+  height: 1.9rem;
+  margin-right: 1rem;
+  border-radius: .6rem;
+  box-shadow: inset 0 0 0 .18rem rgba(255, 255, 255, .55);
+}
+.lights-device[aria-checked="true"] .lights-check { background: #34c77b; box-shadow: none; }
+.lights-device[aria-checked="true"] .lights-check:after {
+  content: "";
+  position: absolute;
+  top: .38rem;
+  left: .66rem;
+  width: .45rem;
+  height: .85rem;
+  border-right: .22rem solid #fff;
+  border-bottom: .22rem solid #fff;
+  -webkit-transform: rotate(45deg);
+  transform: rotate(45deg);
+}
+.lights-device-name { overflow: hidden; flex: 1; min-width: 0; font-size: 1.25rem; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+.lights-device-name small { display: block; margin-top: .1rem; color: var(--text-3); font-size: .95rem; font-weight: 500; }
+.lights-device.is-offline .lights-device-name small { color: var(--warn); }
+.lights-dot { flex: none; width: 1.1rem; height: 1.1rem; margin-left: .8rem; border-radius: 50%; box-shadow: 0 0 .8rem rgba(255, 255, 255, .35); }
+
+/* ---------- Controles: solo botones, con nombre visible ---------- */
+.lights-group { margin-bottom: 1.25rem; }
+.lights-row { display: flex; flex-wrap: wrap; }
+.lights-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 3.4rem;
+  margin: 0 .6rem 0 0;
+  padding: 0 1.05rem;
+  border-radius: 99rem;
+  background: rgba(255, 255, 255, .08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16);
+  font-size: 1.1rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: -webkit-transform .24s var(--spring);
+  transition: transform .24s var(--spring);
+}
+.lights-chip[aria-pressed="true"] { background: rgba(255, 255, 255, .22); box-shadow: inset 0 0 0 .16rem rgba(255, 255, 255, .85); }
+.lights-chip:disabled,
+.lights-device:disabled,
+.lights-search:disabled { opacity: .34; }
+.lights-color { flex-direction: column; width: 5.6rem; height: 5.4rem; padding: 0; border-radius: 1.4rem; }
+.lights-swatch { display: block; width: 2.5rem; height: 2.5rem; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35), 0 .3rem .9rem rgba(0, 0, 0, .35); }
+.lights-swatch-name { display: block; margin-top: .3rem; font-size: .85rem; }
+.lights-note { margin: .2rem 0 0; color: var(--text-3); font-size: 1rem; line-height: 1.4; }
+
+/* ---------- Pie del panel ---------- */
+.lights-actions { display: flex; align-items: center; margin-top: 1.6rem; }
+.lights-status { overflow: hidden; flex: 1; min-width: 0; margin: 0 1.2rem 0 0; color: var(--text); font-size: 1.1rem; font-weight: 500; white-space: nowrap; text-overflow: ellipsis; }
+.lights-search { margin-right: 1rem; }
+
+.lights-chip:focus,
+.lights-device:focus {
+  background: #fff;
+  color: #0a0d18;
+  box-shadow: 0 0 0 .3rem rgba(255, 255, 255, .3), 0 .9rem 2.4rem rgba(0, 0, 0, .45);
+  -webkit-transform: scale(1.06);
+  transform: scale(1.06);
+}
+.lights-device:focus .lights-device-name small { color: rgba(10, 13, 24, .62); }
+.lights-device:focus .lights-check { box-shadow: inset 0 0 0 .18rem rgba(10, 13, 24, .5); }
+.lights-device[aria-checked="true"]:focus .lights-check { box-shadow: none; }
+.lights-chip[aria-pressed="true"]:focus { box-shadow: 0 0 0 .3rem rgba(255, 255, 255, .3), inset 0 0 0 .2rem #0a0d18; }
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  html:not(.force-fallback) .lights-panel { background-color: rgba(18, 22, 44, .42); }
+}
+
+/* ---------- Vista previa compacta (navegador, 320–999 px): acá sí puede desplazarse ---------- */
+@media (max-width: 999px) {
+  .lights-panel { position: fixed; top: .75rem; right: .75rem; bottom: auto; left: .75rem; width: auto; max-height: calc(100% - 1.5rem); overflow-y: auto; padding: 1.5rem 1.25rem 1.25rem; border-radius: 2rem; }
+  .lights-title { font-size: 1.9rem; }
+  .lights-summary { font-size: .95rem; white-space: normal; }
+  .lights-body { display: block; flex: none; margin-top: 1.1rem; }
+  .lights-lamps { width: auto; margin: 0 0 1.2rem; }
+  .lights-list { overflow: visible; }
+  .lights-device { height: 3.8rem; }
+  .lights-chip { margin-bottom: .5rem; }
+  .lights-actions { flex-wrap: wrap; }
+  .lights-status { width: 100%; flex: none; margin: 0 0 .8rem; white-space: normal; }
+}

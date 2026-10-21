@@ -10,3 +10,4 @@ artifacts/
 *.epk
 __pycache__/
 weather-config.js
+lights-config.js

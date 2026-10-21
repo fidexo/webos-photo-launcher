@@ -1,0 +1,449 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const path = require('node:path');
+
+const root = path.join(__dirname, '..');
+const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+const context = { window: {}, Math, JSON, Promise, Error, String, Array, Object, setTimeout, clearTimeout };
+vm.runInNewContext(read('lights-panel.js'), context);
+const L = context.window.LauncherLights;
+const plain = (value) => JSON.parse(JSON.stringify(value));
+const flush = () => new Promise((resolve) => setImmediate(resolve));
+
+function memory(initial) {
+  const data = Object.assign({}, initial);
+  return { getItem: (key) => (key in data ? data[key] : null), setItem: (key, value) => { data[key] = String(value); }, data };
+}
+// Cliente falso: registra cada pedido y responde solo cuando el test lo decide.
+function fakeClient() {
+  const calls = [];
+  const client = {};
+  for (const method of ['capabilities', 'discover', 'getState', 'setState', 'setMode']) {
+    client[method] = function (args) {
+      return new Promise((resolve, reject) => calls.push({ method, args: args === undefined ? undefined : plain(args), resolve, reject }));
+    };
+  }
+  client.calls = calls;
+  client.localStops = 0;
+  client.stopAmbient = () => { client.localStops++; };
+  client.last = () => calls[calls.length - 1];
+  client.names = () => calls.map((call) => call.method);
+  return client;
+}
+function harness(options = {}) {
+  const client = options.client === undefined ? fakeClient() : options.client;
+  const storage = options.storage || memory();
+  const timers = [];
+  const controller = L.createController({
+    client: options.getter ? () => client : client,
+    storage,
+    initialIds: options.initialIds,
+    setTimer: (fn, ms) => { const timer = { fn, ms }; timers.push(timer); return timer; },
+    clearTimer: (timer) => { const at = timers.indexOf(timer); if (at !== -1) timers.splice(at, 1); }
+  });
+  const expire = () => { const pending = timers.splice(0); pending.forEach((timer) => timer.fn()); };
+  return { client, storage, controller, view: controller.view, timers, expire };
+}
+
+test('explicit initial living selection seeds only a fresh install and preserves saved empty selection', () => {
+  const initialIds = ['wiz-aabbcc001122','wiz-aabbcc334455'];
+  assert.deepEqual(plain(harness({initialIds}).view.selected),initialIds);
+  const storage=memory({[L.STORAGE_KEY]:'[]'});
+  assert.deepEqual(plain(harness({initialIds,storage}).view.selected),[]);
+});
+const LAMPS = [
+  { id: 'a8bb50000001', name: 'Living techo', ip: '192.168.1.40', reachable: true, state: { on: true, brightness: 60, rgb: [255, 150, 40] } },
+  { id: 'a8bb50000002', name: 'Living pie', ip: '192.168.1.41', reachable: true, state: { on: false, brightness: 30, rgb: null } },
+  { id: 'a8bb50000003', name: 'Cocina', ip: '192.168.1.42', reachable: true, state: { on: true, brightness: 80, rgb: null } }
+];
+async function ready(h, caps = { available: true, screenSync: false, reason: '' }) {
+  const opening = h.controller.open();
+  h.client.calls[0].resolve(caps);
+  await flush();
+  return opening;
+}
+async function discovered(h, devices = LAMPS) {
+  const search = h.controller.discover();
+  h.client.last().resolve({ devices });
+  await search;
+}
+
+test('creating the controller makes no request; opening asks only for capabilities', async () => {
+  const h = harness();
+  assert.equal(h.client.calls.length, 0);
+  await ready(h);
+  assert.deepEqual(h.client.names(), ['capabilities']);
+  assert.equal(h.client.calls[0].args, undefined);
+  assert.equal(h.view.phase, 'ready');
+  assert.deepEqual(plain(h.view.devices), [], 'devices stay empty until discovery');
+});
+
+test('a saved living selection is read back with getState for exactly those ids', async () => {
+  const h = harness({ storage: memory({ [L.STORAGE_KEY]: JSON.stringify(['a8bb50000001', 'a8bb50000002']) }) });
+  const opening = h.controller.open();
+  h.client.calls[0].resolve({ available: true, screenSync: false });
+  await flush();
+  assert.deepEqual(h.client.names(), ['capabilities', 'getState']);
+  assert.deepEqual(h.client.last().args, { ids: ['a8bb50000001', 'a8bb50000002'] });
+  h.client.last().resolve({ devices: [LAMPS[0]] });
+  await opening;
+  assert.deepEqual(Array.from(h.view.devices, (d) => d.id), ['a8bb50000001']);
+  assert.match(h.view.message, /Una lámpara guardada no respondió/);
+  assert.deepEqual(plain(h.view.selected), ['a8bb50000001', 'a8bb50000002'], 'getState alone never drops a saved id');
+});
+
+test('unavailable, missing or silent services say so and block every action', async () => {
+  const cases = [
+    [{ client: null, getter: true }, /no está instalado/],
+    [{}, /Sin servicio LAN/, { available: false, screenSync: false, reason: 'Sin servicio LAN' }],
+    [{}, /no está disponible/, { available: 'yes' }]
+  ];
+  for (const [options, reason, caps] of cases) {
+    const h = harness(options);
+    const opening = h.controller.open();
+    if (h.client) h.client.calls[0].resolve(caps);
+    await opening;
+    assert.equal(h.view.phase, 'unavailable');
+    assert.match(h.view.reason, reason);
+    const before = h.client ? h.client.calls.length : 0;
+    assert.equal(await h.controller.discover(), false);
+    assert.equal(await h.controller.power(true), false);
+    assert.equal(await h.controller.setMode('manual'), false);
+    assert.equal(h.client ? h.client.calls.length : 0, before, 'no request after unavailable');
+  }
+  const silent = harness();
+  const opening = silent.controller.open();
+  silent.expire();
+  await opening;
+  assert.equal(silent.view.phase, 'unavailable');
+  assert.match(silent.view.reason, /no respondió a tiempo/);
+});
+
+test('discovery selects nothing, drops IPs and prunes saved ids that disappeared', async () => {
+  const storage = memory({ [L.STORAGE_KEY]: JSON.stringify(['a8bb50000002', 'gone-lamp']) });
+  const h = harness({ storage });
+  const opening = h.controller.open();
+  h.client.calls[0].resolve({ available: true, screenSync: false });
+  await flush();
+  h.client.last().resolve({ devices: [] });
+  await opening;
+  await discovered(h);
+  assert.equal(h.client.calls.filter((call) => call.method === 'discover').length, 1);
+  assert.equal(h.client.calls.find((call) => call.method === 'discover').args, undefined);
+  assert.deepEqual(plain(h.view.selected), ['a8bb50000002'], 'only previously chosen lamps that still exist');
+  assert.deepEqual(JSON.parse(storage.data[L.STORAGE_KEY]), ['a8bb50000002']);
+  assert.match(h.view.message, /Se encontraron 3 lámparas.*Se quitaron 1/);
+  const json = JSON.stringify(h.view);
+  for (const lamp of LAMPS) assert.equal(json.includes(lamp.ip), false, 'IP never reaches the view');
+  for (const device of h.view.devices) assert.equal('ip' in device, false);
+
+  const fresh = harness();
+  await ready(fresh);
+  await discovered(fresh);
+  assert.deepEqual(plain(fresh.view.selected), [], 'nothing is selected automatically');
+  assert.equal(await fresh.controller.power(true), false, 'no selection, no request');
+  assert.deepEqual(fresh.client.names(), ['capabilities', 'discover']);
+});
+
+test('selection is explicit, stored under its own key and tolerant of broken storage', async () => {
+  const storage = memory();
+  const h = harness({ storage });
+  await ready(h);
+  await discovered(h);
+  h.controller.toggle('a8bb50000001');
+  h.controller.toggle('a8bb50000002');
+  h.controller.toggle('a8bb50000002');
+  h.controller.toggle('unknown-id');
+  assert.deepEqual(JSON.parse(storage.data[L.STORAGE_KEY]), ['a8bb50000001']);
+  assert.deepEqual(Object.keys(storage.data), [L.STORAGE_KEY]);
+  assert.deepEqual(h.client.names(), ['capabilities', 'discover'], 'toggling never sends anything');
+
+  for (const stored of ['{', '"x"', '[1,"ok-id","ok-id","bad id!"]']) {
+    const broken = harness({ storage: memory({ [L.STORAGE_KEY]: stored }) });
+    assert.deepEqual(plain(broken.view.selected), stored.startsWith('[') ? ['ok-id'] : []);
+  }
+  const throwing = { getItem() { throw Error('denied'); }, setItem() { throw Error('full'); } };
+  const t = harness({ storage: throwing });
+  await ready(t);
+  await discovered(t);
+  t.controller.toggle('a8bb50000003');
+  assert.deepEqual(plain(t.view.selected), ['a8bb50000003'], 'kept in memory');
+});
+
+test('commands send exact payloads to the selected group and report partial failures per lamp', async () => {
+  const h = harness();
+  await ready(h);
+  await discovered(h);
+  ['a8bb50000001', 'a8bb50000002', 'a8bb50000003'].forEach((id) => h.controller.toggle(id));
+  const sent = [];
+  const actions = [() => h.controller.power(true), () => h.controller.level(50), () => h.controller.color([45, 115, 255]), () => h.controller.white(2700)];
+  for (const action of actions) {
+    const pending = action();
+    sent.push(h.client.last().args);
+    h.client.last().resolve({ devices: [{ id: 'a8bb50000001', state: { on: true, brightness: 50, rgb: [45, 115, 255] } }, { id: 'a8bb50000002', error: 'sin respuesta UDP' }] });
+    await pending;
+  }
+  const ids = ['a8bb50000001', 'a8bb50000002', 'a8bb50000003'];
+  assert.deepEqual(sent, [{ ids, on: true }, { ids, brightness: 50 }, { ids, rgb: [45, 115, 255] }, { ids, temperature: 2700 }]);
+  const [one, two, three] = h.view.devices;
+  assert.equal(one.state.brightness, 50);
+  assert.equal(one.note, '');
+  assert.equal(two.note, 'Error: sin respuesta UDP');
+  assert.equal(three.note, 'Sin confirmación');
+  assert.equal(three.state.on, null, 'missing from the answer: unknown, not off');
+  assert.equal(h.view.message, 'Confirmadas 1 de 3; 1 con error; 1 sin confirmación.');
+});
+
+test('a request in flight blocks the next one; a timeout leaves state unknown and ignores the late answer', async () => {
+  const h = harness();
+  await ready(h);
+  await discovered(h);
+  h.controller.toggle('a8bb50000001');
+  const first = h.controller.power(false);
+  assert.equal(await h.controller.level(10), false, 'busy: second command dropped');
+  assert.equal(h.client.calls.filter((call) => call.method === 'setState').length, 1);
+  const late = h.client.last();
+  h.expire();
+  await first;
+  assert.equal(h.view.devices[0].state.on, null);
+  assert.match(h.view.message, /estado de 1 lámpara es desconocido/);
+  late.resolve({ devices: [{ id: 'a8bb50000001', state: { on: false, brightness: 60 } }] });
+  await flush();
+  assert.equal(h.view.devices[0].state.on, null, 'late answer does not fake a confirmation');
+  const next = h.controller.power(true);
+  h.client.last().resolve({ devices: [{ id: 'a8bb50000001', state: { on: true, brightness: 60, rgb: null } }] });
+  await next;
+  assert.equal(h.view.devices[0].state.on, true);
+  assert.equal(h.view.message, 'Confirmado en 1 lámpara.');
+});
+
+test('modes: manual payload is exact, wallpaper and screen stay off until declared, mode only when confirmed', async () => {
+  const h = harness();
+  await ready(h, { available: true, screenSync: false, reason: '' });
+  await discovered(h);
+  h.controller.toggle('a8bb50000002');
+  assert.equal(await h.controller.setMode('ambient'), false, 'wallpaperSync not declared');
+  assert.equal(await h.controller.setMode('screen'), false, 'screenSync false');
+  let pending = h.controller.setMode('manual');
+  assert.deepEqual(h.client.last().args, { mode: 'manual', source: 'wallpaper', ids: ['a8bb50000002'] });
+  h.client.last().resolve({ mode: 'ambient' });
+  await pending;
+  assert.equal(h.view.mode, 'manual', 'a different answer cannot replace the local manual mode');
+  assert.match(h.view.message, /no confirmó/);
+
+  const w = harness();
+  await ready(w, { available: true, screenSync: false, wallpaperSync: true });
+  await discovered(w);
+  w.controller.toggle('a8bb50000001');
+  pending = w.controller.setMode('ambient');
+  assert.deepEqual(w.client.last().args, { mode: 'ambient', source: 'wallpaper', ids: ['a8bb50000001'] });
+  w.client.last().resolve({ mode: 'ambient' });
+  await pending;
+  assert.equal(w.view.mode, 'ambient');
+});
+
+test('opening restores only a recognized capabilities mode without restarting ambient', async () => {
+  for (const mode of ['manual', 'ambient', 'screen', 'unexpected', null, undefined]) {
+    const h = harness();
+    await ready(h, { available: true, mode, wallpaperSync: true, screenSync: false });
+    assert.equal(h.view.mode, ['manual', 'ambient', 'screen'].includes(mode) ? mode : null);
+    assert.deepEqual(h.client.names(), ['capabilities']);
+    assert.equal(h.client.localStops, 0, 'reading a mode never stops or starts it');
+  }
+});
+
+test('selection changes stop only local ambient and preserve the explicit group', async () => {
+  const h = harness();
+  await ready(h, { available: true, mode: 'ambient', wallpaperSync: true }); await discovered(h);
+  const before = h.client.names();
+  h.controller.toggle('a8bb50000001'); h.controller.toggle('a8bb50000002'); h.controller.toggle('a8bb50000001');
+  assert.equal(h.view.mode, 'manual'); assert.equal(h.client.localStops, 3);
+  assert.deepEqual(h.client.names(), before, 'selection sends no RPC or physical change');
+  assert.deepEqual(plain(h.view.selected), ['a8bb50000002']);
+  assert.deepEqual(JSON.parse(h.storage.data[L.STORAGE_KEY]), ['a8bb50000002']);
+  h.controller.toggle('unknown'); assert.equal(h.client.localStops, 3);
+});
+
+test('a local selection stop invalidates an old mode confirmation without clearing a newer request', async () => {
+  const h = harness(); await ready(h, { available: true, mode: 'manual', wallpaperSync: true }); await discovered(h);
+  h.controller.toggle('a8bb50000001');
+  const old = h.controller.setMode('ambient'); const oldCall = h.client.last();
+  h.controller.toggle('a8bb50000002');
+  assert.equal(h.view.mode, 'manual'); assert.equal(h.view.busy, '');
+  const next = h.controller.setMode('ambient'); const nextCall = h.client.last();
+  assert.notEqual(nextCall, oldCall); assert.ok(h.view.busy);
+  oldCall.resolve({ mode: 'ambient' }); assert.equal(await old, false);
+  assert.equal(h.view.mode, 'manual'); assert.ok(h.view.busy, 'old result cannot clear the new request');
+  nextCall.resolve({ mode: 'ambient' }); assert.equal(await next, true);
+  assert.equal(h.view.mode, 'ambient');
+  assert.deepEqual(nextCall.args.ids, ['a8bb50000001', 'a8bb50000002']);
+});
+
+test('manual controls stop locally and immediately show manual even if their RPC fails', async () => {
+  const h = harness(); await ready(h, { available: true, mode: 'manual', wallpaperSync: true }); await discovered(h);
+  h.controller.toggle('a8bb50000001');
+  for (const action of [() => h.controller.power(false), () => h.controller.level(50), () => h.controller.color([1, 2, 3]), () => h.controller.white(2700)]) {
+    const starting = h.controller.setMode('ambient'); h.client.last().resolve({ mode: 'ambient' }); await starting;
+    const stops = h.client.localStops; const calls = h.client.calls.length;
+    const pending = action();
+    assert.equal(h.view.mode, 'manual', 'the local engine stopped before the physical result');
+    assert.equal(h.client.localStops, stops + 1); assert.equal(h.client.calls.length, calls + 1);
+    assert.equal(h.client.last().method, 'setState'); assert.deepEqual(h.client.last().args.ids, ['a8bb50000001']);
+    h.client.last().reject(Error('busy')); await pending;
+    assert.equal(h.view.mode, 'manual'); assert.match(h.view.message, /busy/);
+    assert.deepEqual(plain(h.view.selected), ['a8bb50000001']);
+  }
+});
+
+test('discovery pruning stops old ambient recipients, while an unchanged group keeps the mode', async () => {
+  const h = harness(); await ready(h, { available: true, mode: 'manual', wallpaperSync: true }); await discovered(h);
+  h.controller.toggle('a8bb50000001'); h.controller.toggle('a8bb50000002');
+  const starting = h.controller.setMode('ambient'); h.client.last().resolve({ mode: 'ambient' }); await starting;
+  let stops = h.client.localStops; await discovered(h);
+  assert.equal(h.view.mode, 'ambient'); assert.equal(h.client.localStops, stops);
+  await discovered(h, [LAMPS[1], LAMPS[2]]);
+  assert.equal(h.view.mode, 'manual'); assert.equal(h.client.localStops, stops + 1);
+  assert.deepEqual(plain(h.view.selected), ['a8bb50000002']);
+});
+
+test('the local stop hook is optional and never required for reading capabilities', async () => {
+  const h = harness(); delete h.client.stopAmbient;
+  await ready(h, { available: true, mode: 'ambient', wallpaperSync: true }); await discovered(h);
+  h.controller.toggle('a8bb50000001'); assert.equal(h.view.mode, 'manual');
+  const request = h.controller.power(false); h.client.last().reject(Error('offline')); await request;
+  assert.equal(h.view.mode, 'manual'); assert.deepEqual(h.client.names(), ['capabilities', 'discover', 'setState']);
+});
+
+test('Manual and failed ambient restarts never retain the old ambient label after local stop', async () => {
+  const h = harness(); await ready(h, { available: true, mode: 'manual', wallpaperSync: true }); await discovered(h);
+  h.controller.toggle('a8bb50000001');
+  for (const mode of ['manual', 'ambient']) {
+    const active = h.controller.setMode('ambient'); h.client.last().resolve({ mode: 'ambient' }); await active;
+    const stops = h.client.localStops; const pending = h.controller.setMode(mode);
+    assert.equal(h.view.mode, 'manual'); assert.equal(h.client.localStops, stops + 1);
+    h.client.last().reject(Error('service unavailable')); assert.equal(await pending, false);
+    assert.equal(h.view.mode, 'manual'); assert.deepEqual(plain(h.view.selected), ['a8bb50000001']);
+  }
+  const active = h.controller.setMode('ambient'); h.client.last().resolve({ mode: 'ambient' }); await active;
+  const stopping = h.controller.setMode('manual'); h.expire(); assert.equal(await stopping, false);
+  assert.equal(h.view.mode, 'manual', 'a backend timeout cannot reactivate the stopped local engine');
+  assert.doesNotMatch(h.view.message, /modo actual es desconocido/);
+});
+
+test('rendered ambient controls describe only Mi pantalla and a color click returns to manual', async () => {
+  function node(tag) {
+    return { tag, children: [], attributes: {}, style: {}, listeners: {}, disabled: false,
+      appendChild(child) { this.children.push(child); child.parentNode = this; },
+      setAttribute(key, value) { this.attributes[key] = value; }, getAttribute(key) { return this.attributes[key]; },
+      addEventListener(name, fn) { this.listeners[name] = fn; }, removeEventListener() {}, focus() {} };
+  }
+  const fields = {};
+  for (const name of ['lights-list', 'lights-controls', 'lights-close', 'lights-search', 'lights-summary', 'lights-status']) fields[name] = node('div');
+  const host = node('section'); host.querySelector = (selector) => fields[selector.slice(1)];
+  const sandbox = { window: { localStorage: memory() }, document: { activeElement: null, createElement: node }, Promise, Error, setTimeout, clearTimeout };
+  vm.runInNewContext(read('lights-panel.js'), sandbox);
+  const client = fakeClient();
+  const mounted = sandbox.window.LauncherLights.mount({ host, button: node('button'), client });
+  const h = { client, controller: mounted.controller, view: mounted.controller.view };
+  await ready(h, { available: true, mode: 'manual', wallpaperSync: true, screenSync: false }); await discovered(h);
+  h.controller.toggle('a8bb50000001');
+  const pending = h.controller.setMode('ambient'); client.last().resolve({ mode: 'ambient' }); await pending;
+  const flatten = (n) => [n, ...n.children.flatMap(flatten)];
+  const controls = flatten(fields['lights-controls']);
+  const color = controls.find((n) => n.className === 'lights-chip lights-color');
+  const whites = controls.filter((n) => n.className === 'lights-chip lights-white');
+  const modes = controls.filter((n) => n.className === 'lights-chip lights-mode');
+  const note = controls.find((n) => n.className === 'lights-note');
+  assert.equal(color.disabled, false); assert.ok(whites.every((n) => !n.disabled));
+  assert.equal(modes[2].disabled, true); assert.equal(modes[1].attributes['aria-pressed'], 'true');
+  assert.match(note.textContent, /foto de Mi pantalla/); assert.match(note.textContent, /no otras apps ni HDMI/);
+  assert.match(note.textContent, /captura pendiente de verificar en esta TV/); assert.doesNotMatch(note.textContent, /esta tele.*no permite/);
+  color.listeners.click();
+  assert.equal(h.view.mode, 'manual'); assert.equal(modes[0].attributes['aria-pressed'], 'true');
+  assert.equal(modes[1].attributes['aria-pressed'], 'false'); assert.equal(client.last().method, 'setState');
+  client.last().resolve({ devices: [LAMPS[0]] }); await flush();
+});
+
+test('closing invalidates pending answers and reports that the last request was unconfirmed', async () => {
+  const h = harness();
+  await ready(h);
+  await discovered(h);
+  h.controller.toggle('a8bb50000001');
+  h.controller.power(true);
+  const pending = h.client.last();
+  assert.equal(h.controller.close(), true, 'a request was still in flight');
+  pending.resolve({ devices: [{ id: 'a8bb50000001', state: { on: true, brightness: 100 } }] });
+  await flush();
+  assert.equal(h.view.devices[0].state.brightness, 60, 'answers after closing are ignored');
+  assert.equal(h.controller.close(), false);
+});
+
+test('reopening never shows lamp states from a previous opening, even if the service is gone', async () => {
+  const h = harness();
+  await ready(h);
+  await discovered(h);
+  h.controller.close();
+  const opening = h.controller.open();
+  assert.deepEqual(plain(h.view.devices), [], 'cleared before any answer');
+  h.client.last().resolve({ available: false, screenSync: false, reason: 'servicio detenido' });
+  await opening;
+  assert.equal(h.view.phase, 'unavailable');
+  assert.deepEqual(plain(h.view.devices), []);
+});
+
+test('device data is sanitised: no IP, bounded name, invalid ids and states rejected', () => {
+  const device = L.cleanDevice({ id: 'a8bb50000001', name: ' Lámpara\n<b>techo</b> ', ip: '10.0.0.2', mac: 'x', state: { on: 'yes', brightness: 140, rgb: [1, 2, 300] } });
+  assert.deepEqual(plain(device), { id: 'a8bb50000001', name: 'Lámpara <b>techo</b>', reachable: true, note: '', state: { on: null, brightness: null, rgb: null, temperature: null } });
+  for (const bad of [null, {}, { id: '' }, { id: 'has space' }, { id: 7 }]) assert.equal(L.cleanDevice(bad), null);
+});
+
+// ---------- Integración estática con la app ----------
+test('lights code avoids features missing from Chromium 68 and forbidden APIs', () => {
+  const js = read('lights-panel.js');
+  assert.doesNotMatch(js, /\?\.|\?\?|=>|\bclass\s+\w|\blet\s|\bconst\s|`|\basync\b|\bawait\b/);
+  assert.doesNotMatch(js, /getImageData|toDataURL|<canvas|innerHTML|insertAdjacentHTML|XMLHttpRequest|fetch\(|WebSocket|\.ip\b/);
+  const css = read('lights-panel.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  for (const pattern of [/(?<![-\w])gap\s*:/, /(?<![-\w])aspect-ratio\s*:/, /color-mix\(/, /oklch\(/, /@container/, /\binset\s*:/, /\b(?:clamp|min|max)\(/, /:focus-visible/, /:is\(/, /100vh/, /(?<!backdrop-)filter:\s*blur/]) {
+    assert.equal(pattern.test(css), false, 'lights-panel.css uses ' + pattern);
+  }
+});
+
+test('requests come only from clicks: no focus or key handler talks to the client', () => {
+  const js = read('lights-panel.js');
+  const events = Array.from(js.matchAll(/addEventListener\('(\w+)'/g), (match) => match[1]);
+  assert.deepEqual(Array.from(new Set(events)).sort(), ['click', 'focusin', 'keydown']);
+  assert.equal(js.split("call('discover'").length - 1, 1, 'a single discovery site');
+  assert.equal(js.split('controller.discover()').length - 1, 1, 'discovery only from the Buscar button handler');
+  assert.match(js, /function onSearch\(\) \{ controller\.discover\(\); \}/);
+  assert.match(js, /search\.addEventListener\('click', onSearch\)/);
+  const keys = js.slice(js.indexOf('function moveFocus'), js.indexOf('function openPanel'));
+  assert.doesNotMatch(keys, /controller\.(?!close)|client/);
+});
+
+test('index.html: discreet Luces button next to Personalizar, panel closed, dock untouched', () => {
+  const html = read('index.html');
+  const actions = html.slice(html.indexOf('<div class="top-actions">'), html.indexOf('id="weather"'));
+  assert.match(actions, /<button id="lights-button"[^>]*\bhidden>/);
+  assert.ok(actions.indexOf('id="lights-button"') < actions.indexOf('id="edit-button"'));
+  assert.match(html, /<section id="lights-panel"[^>]*role="dialog"[^>]*aria-modal="true"[^>]*hidden>/);
+  assert.ok(html.indexOf('lights-panel.js') < html.indexOf('<script src="app.js">'));
+  assert.match(html, /<link rel="stylesheet" href="lights-panel.css">/);
+  assert.equal(fs.statSync(path.join(root, 'assets/logos/lights.svg')).isFile(), true);
+  const dock = html.slice(html.indexOf('<section class="dock'), html.indexOf('</main>'));
+  assert.doesNotMatch(dock, /lights/);
+  const sandbox = { window: {} };
+  vm.runInNewContext(read('config.js'), sandbox);
+  assert.equal(sandbox.window.LAUNCHER_CONFIG.length, 7, 'no eighth dock entry');
+  assert.equal(sandbox.window.LAUNCHER_CONFIG.some((item) => /light|luz|wiz/i.test(item.key + item.title)), false);
+});
+
+test('app.js mounts the panel only when the module exists and resolves the client lazily', () => {
+  const app = read('app.js');
+  assert.match(app, /if \(window\.LauncherLights\) \{\s*window\.LauncherLights\.mount\(\{/);
+  assert.match(app, /client: function \(\) \{ return window\.LAUNCHER_LIGHTS_CLIENT \|\| null; \}/);
+  assert.equal(app.split('LauncherLights.mount(').length - 1, 1);
+  const focusCode = app.slice(app.indexOf('function showFocus'), app.indexOf('// ---------- Inicio'));
+  assert.doesNotMatch(focusCode, /Lights|lights/);
+});

@@ -1,0 +1,7 @@
+{
+  "id": "com.frxn.mipantalla.lights",
+  "description": "Control local de luces WiZ del living",
+  "services": [
+    {"name": "com.frxn.mipantalla.lights", "description": "WiZ LAN"}
+  ]
+}

@@ -23,6 +23,14 @@ instalador y del comando de apertura no acredita por sí sola el funcionamiento 
 **0.4.1:** ícono de Bedrock para Transitions, revisado en Brave a 1280×720. Pasaron las 77 pruebas
 y la verificación del IPK; instalación y orden de apertura aceptadas por la TV.
 
+**0.5:** panel Luces WiZ diseñado con Opus, servicio UDP local y selección del living. El dueño
+confirmó que las seis lámparas responden al brillo del 50 % desde la TV. **0.5.1** agrega
+acompañamiento del color del fondo de Mi pantalla: 147 pruebas aprobadas, paquete de 46 archivos
+verificado, instalación y apertura aceptadas por la TV. El dueño confirmó después que el modo
+de color del fondo funciona. El primer intento no lo mostró; no se obtuvo un error para atribuir
+una causa a esa demora.
+Capturar otras apps o HDMI continúa deshabilitado. [Uso y límites de Luces](docs/lights.md).
+
 ## Selección del usuario
 
 YouTube, Spotify, Nuvio, Netflix, Disney+, Transitions · John Digweed y HDMI 1, en ese orden.
@@ -236,11 +244,12 @@ de inicio una vez integrada; no reemplaza toda la interfaz del sistema operativo
 
 ## Alcance
 
-El paquete `.ipk` 0.4.0 se generó con `@webos-tools/cli` 3.2.6, se verificó contra `dist/` (33 archivos)
-y se instaló en la TV vinculada. El paquete privado y su configuración del clima no se publican.
+El paquete `.ipk` 0.5.1 se generó con `@webos-tools/cli` 3.2.6, se verificó contra `dist/` y el servicio
+WiZ (46 archivos) y se instaló en la TV vinculada. El paquete privado y sus configuraciones del
+clima y las lámparas no se publican.
 Esa herramienta no forma parte de la app ni es necesaria para la vista previa.
 Para volver a empaquetar tras cambiar archivos, ejecutar `npm run build` y luego
-`npm exec --yes --package=@webos-tools/cli@3.2.6 -- ares-package dist -o artifacts --no-minify`.
+`npm exec --yes --package=@webos-tools/cli@3.2.6 -- ares-package dist services/com.frxn.mipantalla.lights -o artifacts --no-minify`.
 `python scripts/verify_package.py` comprueba contenido y timestamps del paquete sin ejecutarlo.
 La advertencia del CLI sobre `requiredACG` no aplica a webOS 5: LG documenta que
 ACG no está soportado en webOS TV 25 o anteriores:

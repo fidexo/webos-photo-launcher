@@ -10,8 +10,13 @@ las del [tutorial](tutorial.md).
 | 0.2 | Primer diseño Liquid Glass. | Aprobado por el dueño. |
 | 0.3 | Solo íconos, 4 fotos locales rotando, clima de Open-Meteo, Personalizar. | **Verificado en la TV**: instalada y abierta por CLI; el dueño confirmó que le gustó. |
 | 0.4.1 | Ícono de Bedrock Records para Transitions. | Verificado en Brave; 77 pruebas aprobadas, IPK verificado e instalación/apertura aceptadas por CLI. Confirmación visual en TV pendiente. |
+| 0.5.0 | Panel Luces y servicio local WiZ. | El dueño confirmó lectura y brillo del 50 % en las seis lámparas del living desde la TV. |
+| 0.5.1 | Acompañar el color del fondo de Mi pantalla. | 147 pruebas aprobadas, IPK verificado e instalado; el dueño confirmó que el modo funciona en la TV. Captura completa deshabilitada. |
 | — | Nuvio oficial 1.2.9 | Instalada, hash verificado, apertura aceptada. Sin probar login ni reproducción. |
 | — | Inventario de apps por SSAP | 124 apps leídas. Ver [cleaning.md](cleaning.md). |
+
+El uso, los modos y sus límites están en [Luces WiZ](lights.md). Root, captura de otras apps/HDMI,
+Home, autostart y eliminación de apps siguen pendientes de verificación en hardware.
 
 ## 0.4: Fotos diarias + Transitions (implementado; validación visual en TV pendiente)
 
@@ -99,8 +104,8 @@ https://www.lg.com/es/soporte/guias-y-soluciones/television/webos-3-5-funcion-qu
 
 ## Root (no ejecutado)
 
-Esto queda documentado como investigación, **no como instrucciones**. El dueño autorizó root si
-fuera necesario. No se ejecutó: las funciones actuales no lo requieren. La integración con Home y
+Esto queda documentado como trabajo en curso, **no como una instalación terminada**. El dueño
+autorizó root, arranque y limpieza. No se ejecutó todavía; el control WiZ y el fondo propio no lo requieren. La integración con Home y
 arranque exige trabajo adicional, explicado en [Root y Home](root-and-home.md).
 
 Lo que encontramos:
@@ -131,5 +136,5 @@ revisión encontró defaults de Telnet y SSH que necesitan cambios; no se ejecut
 ## Fuera de alcance
 
 - Reemplazar el sistema operativo o el firmware.
-- Modificar o borrar apps o servicios del sistema por SSH.
+- Borrar componentes del sistema sin identificar dependencias y comprobar recuperación.
 - Redistribuir IPK de terceros.

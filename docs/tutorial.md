@@ -105,8 +105,8 @@ npm test
 npm run build
 ```
 
-- `npm test` corre **77 pruebas** con el runner nativo de Node (`node --test`), todas en verde para
-  la 0.4. Usan dobles simulados: no equivalen a probar en la TV.
+- `npm test` usa el runner nativo de Node (`node --test`). La suite incluye fotos, enlaces,
+  empaquetado y control WiZ con dobles simulados: no equivale a probar en la TV.
 - `npm run build` copia a `dist/` solo lo que la app necesita: HTML, CSS, JS, configuración,
   íconos SVG, fotos con sus créditos y el SDK oficial `vendor/webOSTV.js` (1.2.13, Apache-2.0,
   procedencia en `vendor/SOURCE.md`). Nunca copia `node_modules`.
@@ -116,7 +116,7 @@ La app no tiene dependencias de runtime: es HTML, CSS y JavaScript ES5. Nada de 
 ## 4. Empaquetar el IPK y verificarlo
 
 ```sh
-npm exec --yes --package=@webos-tools/cli@3.2.6 -- ares-package dist -o artifacts --no-minify
+npm exec --yes --package=@webos-tools/cli@3.2.6 -- ares-package dist services/com.frxn.mipantalla.lights -o artifacts --no-minify
 python scripts/verify_package.py
 ```
 
@@ -128,7 +128,8 @@ python scripts/verify_package.py
 - que `appinfo.json` coincida con el del repo (ID y versión);
 - que los archivos conserven timestamps posteriores al año 2000, como medida de compatibilidad;
 - que no se hayan colado `node_modules` ni el SDK sin descomprimir;
-- que el contenido sea idéntico byte a byte a lo que dejó `npm run build`.
+- que el contenido de la app sea idéntico byte a byte a lo que dejó `npm run build`, y el del
+  servicio WiZ coincida con `services/com.frxn.mipantalla.lights/`.
 
 El CLI avisa que falta `requiredACG`. **En webOS 5 no es un error**: LG documenta que ACG no se
 aplica a webOS TV 25 ni anteriores. https://webostv.developer.lge.com/develop/guides/acg-guide .

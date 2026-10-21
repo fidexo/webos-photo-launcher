@@ -1,12 +1,14 @@
 # Root, botón Home e inicio automático
 
-Estado al 20 de octubre de 2026: no se ejecutó root en la TV ni se instalaron hooks de Home o de arranque. Se revisaron fuentes y un paquete de Homebrew Channel en el equipo de desarrollo. La autorización para usar root si hace falta ya fue otorgada; las funciones actuales de la línea 0.4 no lo necesitan.
+Estado al 21 de octubre de 2026: no se ejecutó root en la TV ni se instalaron hooks de Home o de arranque. Se revisaron fuentes y un paquete de Homebrew Channel en el equipo de desarrollo. La autorización para root, arranque y limpieza ya fue otorgada; el control WiZ y el acompañamiento del fondo propio no lo necesitan.
 
 Mi Pantalla sigue siendo una aplicación de webOS. Abrir apps, elegir accesos y personalizar su interfaz no reemplaza el sistema operativo, el firmware ni el Home de LG. Instalar nuestra app tampoco hace que arranque sola o capture el botón Home.
 
 ## Qué se revisó
 
-La revisión fue estática: lectura del código, scripts e invocaciones relacionadas. No se ejecutaron exploits, instaladores o dependencias de esos proyectos, y no se probaron estos cambios en hardware.
+Se leyeron código, scripts e invocaciones y se prepararon variantes locales con pruebas de guardas
+en fixtures. No se ejecutaron exploits ni instaladores en la TV. Las pruebas de fixtures no
+acreditan root, persistencia o recuperación del dispositivo.
 
 | Proyecto | Fuente fijada | Alcance |
 | --- | --- | --- |
@@ -42,6 +44,6 @@ El proyecto declara webOS 5.x como **“Expected working”**, con webOS 25 como
 
 Hace falta confirmar nuevamente la compatibilidad exacta y conservar los paquetes, datos y ajustes necesarios de las apps de desarrollo. También hay que resolver la convivencia con Developer Mode sin perderlas; el propio autoroot exige retirar la app de LG antes de reiniciar cuando la detecta instalada.
 
-La preparación técnica debe fijar artefactos y hashes, respaldar el estado que se va a modificar y endurecer el acceso remoto **antes del primer startup de HBC**: clave pública, SSH sin contraseñas y sin Telnet abierto, incluida la recuperación. Un startup personalizado es viable según el código revisado, pero todavía no está implementado ni probado en la TV. Esto tampoco elimina la confianza que exige el transporte local del exploit.
+La preparación técnica debe fijar artefactos y hashes, respaldar el estado que se va a modificar y endurecer el acceso remoto **antes del primer startup de HBC**: clave pública, SSH sin contraseñas y sin Telnet abierto, incluida la recuperación. Se preparó una variante local de startup con esas restricciones, todavía sin prueba en la TV. Esto tampoco elimina la confianza que exige el transporte local del exploit.
 
 Después se necesita evidencia real de root, acceso de recuperación y persistencia antes de avanzar a Home o arranque. Cada integración deberá tener una forma comprobada de desactivarse y devolver el control al Home de LG. Hasta completar esas pruebas, Home y boot siguen siendo trabajo futuro; la app actual se puede usar sin esos cambios.
