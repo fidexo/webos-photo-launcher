@@ -34,7 +34,10 @@ with tarfile.open(fileobj=io.BytesIO(parts['data.tar.gz']), mode='r:gz') as arch
     app_prefix = 'usr/palm/applications/' + info['id'] + '/'
     service_id = info['id'] + '.lights'
     service_prefix = 'usr/palm/services/' + service_id + '/'
-    service_files = {'api.js', 'controller.js', 'protocol.js', 'service.js', 'transport.js', 'package.json', 'services.json'}
+    service_files = {'api.js', 'controller.js', 'protocol.js', 'service.js', 'transport.js', 'package.json', 'services.json',
+                     'hyperhdr-rpc.js', 'screen-backend.js', 'screen-control.js', 'screen-session.js', 'screen-settings.js', 'screen-store.js'}
+    if (root / 'services' / service_id / 'screen-config.json').is_file():
+        service_files.add('screen-config.json')
     checked_app = set()
     checked_service = set()
     for member in members:

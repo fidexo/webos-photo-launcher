@@ -31,6 +31,15 @@ de color del fondo funciona. El primer intento no lo mostró; no se obtuvo un er
 una causa a esa demora.
 Capturar otras apps o HDMI continúa deshabilitado. [Uso y límites de Luces](docs/lights.md).
 
+**0.6.0:** agrega **Revisar captura**, un diagnóstico de solo lectura, transporte autenticado a
+HyperHDR local y una sesión con parada y restauración probadas con dobles. Pasaron **206 pruebas**
+y se verificó el IPK de **52 archivos**, incluidos **13 del servicio**. El CLI aceptó su instalación
+y la orden de apertura; el usuario comprobó en la TV que el diagnóstico informa falta de
+configuración. No volvió a validar los controles manuales ni el fondo en esta versión.
+Esto prepara la integración: el backend rechaza siempre el arranque porque
+todavía no puede verificar imágenes frescas ni el hardware. No se ejecutaron root, captura ni
+HyperHDR reales; el usuario pospuso expresamente root. [Estado de la integración](docs/screen-sync.md).
+
 ## Selección del usuario
 
 YouTube, Spotify, Nuvio, Netflix, Disney+, Transitions · John Digweed y HDMI 1, en ese orden.
@@ -206,8 +215,10 @@ El inventario completo de esta TV (124 apps, por SSAP y solo lectura) está resu
    Developer Mode; falta confirmar sus fotos diarias y Transitions desde el dock en hardware.
 2. Inventario de apps hecho ([docs/cleaning.md](docs/cleaning.md)). Falta confirmar control remoto,
    audio y reproducción.
-3. Root autorizado si resulta necesario, pero no ejecutado: estas funciones funcionan como una app
-   común. Se revisaron fuentes fijadas de SlopBro y Homebrew Channel; [hallazgos y límites](docs/root-and-home.md).
+3. 0.6.0 empaquetada; instalación y orden de apertura aceptadas por CLI. El usuario comprobó
+   en la TV el diagnóstico de captura sin configurar. Revisar captura no activa sincronización.
+   El usuario pospuso expresamente root; no se ejecutaron root, captura ni HyperHDR reales.
+   Se revisaron fuentes fijadas de SlopBro y Homebrew Channel; [hallazgos y límites](docs/root-and-home.md).
 4. Probar un mecanismo de Home y arranque específico para webOS 5, con desactivación
    y recuperación verificadas. Esta versión no lo incluye ni afirma que esté validado.
 5. Borrar solo las apps elegidas que LG permita desinstalar por su interfaz: Home,
@@ -244,8 +255,10 @@ de inicio una vez integrada; no reemplaza toda la interfaz del sistema operativo
 
 ## Alcance
 
-El paquete `.ipk` 0.5.1 se generó con `@webos-tools/cli` 3.2.6, se verificó contra `dist/` y el servicio
-WiZ (46 archivos) y se instaló en la TV vinculada. El paquete privado y sus configuraciones del
+El paquete `.ipk` 0.6.0 se generó con `@webos-tools/cli` 3.2.6 y se verificó contra `dist/` y el
+servicio WiZ: 52 archivos, incluidos 13 del servicio. El CLI aceptó su instalación y la orden de
+apertura; el dueño comprobó el diagnóstico de captura sin configurar. Los controles manuales y
+el fondo tienen confirmación física previa en 0.5.1. El paquete privado y sus configuraciones del
 clima y las lámparas no se publican.
 Esa herramienta no forma parte de la app ni es necesaria para la vista previa.
 Para volver a empaquetar tras cambiar archivos, ejecutar `npm run build` y luego
@@ -254,6 +267,11 @@ Para volver a empaquetar tras cambiar archivos, ejecutar `npm run build` y luego
 La advertencia del CLI sobre `requiredACG` no aplica a webOS 5: LG documenta que
 ACG no está soportado en webOS TV 25 o anteriores:
 https://webostv.developer.lge.com/develop/guides/acg-guide .
+La integración de captura usa únicamente `127.0.0.1:19444`, con autenticación e instancia cero.
+`screen-config.example.json` viene deshabilitado; la configuración opcional privada se lee desde
+`services/com.frxn.mipantalla.lights/screen-config.json`, excluido de Git. Sin configuración no se
+abre esa conexión. Configurar el diagnóstico no elimina el bloqueo de captura ni prueba hardware.
+
 El runtime es HTML/CSS/JavaScript y la biblioteca oficial webOSTV.js 1.2.13 (Apache-2.0).
 No requiere Vercel, servidor propio, cuenta nueva, analytics ni servicios de pago. Conexiones externas:
 la consulta pública de clima a api.open-meteo.com y, una vez por día, la de fotos a commons.wikimedia.org

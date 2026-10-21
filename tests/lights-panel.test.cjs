@@ -20,7 +20,7 @@ function memory(initial) {
 function fakeClient() {
   const calls = [];
   const client = {};
-  for (const method of ['capabilities', 'discover', 'getState', 'setState', 'setMode']) {
+  for (const method of ['capabilities', 'discover', 'getState', 'setState', 'setMode', 'screenStatus']) {
     client[method] = function (args) {
       return new Promise((resolve, reject) => calls.push({ method, args: args === undefined ? undefined : plain(args), resolve, reject }));
     };
@@ -69,6 +69,161 @@ async function discovered(h, devices = LAMPS) {
   h.client.last().resolve({ devices });
   await search;
 }
+const SCREEN_READY = { configured: true, available: true, configVerified: true, framesVerified: true,
+  hardwareVerified: true, ready: true, active: false, sourceFreshness: 'fresh', reason: '' };
+async function reviewed(h, patch = {}) {
+  assert.equal(typeof h.controller.screenStatus, 'function', 'explicit capture review action');
+  const pending = h.controller.screenStatus();
+  h.client.last().resolve(Object.assign({}, SCREEN_READY, patch));
+  await pending;
+}
+
+test('capture review is explicit, accepts no lamps, sends only saved ids and preserves no secrets', async () => {
+  const h = harness(); await ready(h, { available: true, screenSync: false });
+  assert.deepEqual(h.client.names(), ['capabilities']);
+  assert.equal(typeof h.controller.screenStatus, 'function', 'capture review action exists');
+  const pending = h.controller.screenStatus();
+  assert.deepEqual(h.client.last().args, { ids: [] });
+  h.client.last().resolve(Object.assign({}, SCREEN_READY, { ready: false, hardwareVerified: false,
+    reason: 'frames-unverified', token: 'secret-token', endpoint: 'secret-host' }));
+  await pending;
+  assert.equal(h.view.screen.reason, 'frames-unverified');
+  assert.doesNotMatch(JSON.stringify(h.view), /secret-token|secret-host/);
+  assert.deepEqual(h.client.names(), ['capabilities', 'screenStatus'], 'review never writes or discovers');
+});
+
+test('screen mode requires capture review plus capability and verified frames and hardware', async () => {
+  for (const patch of [null, { ready: false }, { hardwareVerified: false }, { framesVerified: false }, { ready: 'true' }]) {
+    const h = harness(); await ready(h, { available: true, screenSync: true }); await discovered(h);
+    h.controller.toggle(LAMPS[0].id);
+    if (patch) await reviewed(h, patch);
+    const before = h.client.names();
+    const pending = h.controller.setMode('screen');
+    assert.deepEqual(h.client.names(), before, 'unverified screen never sends a mode write');
+    assert.equal(await pending, false);
+  }
+  const h = harness(); await ready(h, { available: true, screenSync: false }); await discovered(h);
+  h.controller.toggle(LAMPS[0].id); await reviewed(h);
+  assert.equal(await h.controller.setMode('screen'), false, 'review cannot replace the capability gate');
+  h.view.caps.screenSync = true;
+  const pending = h.controller.setMode('screen');
+  assert.deepEqual(h.client.last().args, { mode: 'screen', source: 'screen', ids: [LAMPS[0].id] });
+  h.client.last().resolve({ mode: 'screen' }); assert.equal(await pending, true);
+});
+
+test('capture diagnostics accept only strict fields and listed reasons, including thrown errors', async () => {
+  const h = harness(); await ready(h, { available: true, screenSync: true });
+  for (const response of [Object.assign({}, SCREEN_READY, { reason: 'secret-token@secret-host' }),
+    Object.assign({}, SCREEN_READY, { reason: ['frames-unverified'] }),
+    Object.assign({}, SCREEN_READY, { available: 1 }), Object.assign({}, SCREEN_READY, { sourceFreshness: 'secret-host' })]) {
+    assert.equal(typeof h.controller.screenStatus, 'function');
+    const pending = h.controller.screenStatus(); h.client.last().resolve(response); await pending;
+    assert.equal(h.view.screen.ready, false);
+    assert.equal(h.view.screen.reason, 'protocol-error');
+    assert.doesNotMatch(JSON.stringify(h.view), /secret-token|secret-host/);
+  }
+  const pending = h.controller.screenStatus(); h.client.last().reject(Error('secret-token@secret-host')); await pending;
+  assert.equal(h.view.screen.reason, 'protocol-error');
+  assert.doesNotMatch(JSON.stringify(h.view), /secret-token|secret-host/);
+});
+
+test('capture timeout revokes prior readiness and late or closed responses cannot restore it', async () => {
+  const h = harness(); await ready(h, { available: true, screenSync: true }); await reviewed(h);
+  const pending = h.controller.screenStatus(); const late = h.client.last();
+  h.expire(); await pending;
+  assert.equal(h.view.screen.ready, false); assert.equal(h.view.screen.reason, 'timeout');
+  late.resolve(SCREEN_READY); await flush(); assert.equal(h.view.screen.ready, false);
+  const closing = h.controller.screenStatus(); const stale = h.client.last(); h.controller.close();
+  stale.resolve(SCREEN_READY); await closing; assert.equal(h.view.screen.ready, false);
+  const reopening = h.controller.open(); h.client.last().resolve({ available: true, screenSync: true }); await reopening;
+  assert.equal(h.view.screen.ready, false, 'every opening requires a fresh explicit review');
+});
+
+test('screen selection and discovery stay frozen until Manual is confirmed', async () => {
+  const h = harness(); await ready(h, { available: true, screenSync: true }); await discovered(h);
+  h.controller.toggle(LAMPS[0].id); await reviewed(h);
+  const active = h.controller.setMode('screen'); h.client.last().resolve({ mode: 'screen' }); await active;
+  const before = h.client.names(); h.controller.toggle(LAMPS[1].id);
+  assert.deepEqual(plain(h.view.selected), [LAMPS[0].id]); assert.match(h.view.message, /Manual/);
+  assert.equal(await h.controller.discover(), false); assert.deepEqual(h.client.names(), before);
+  assert.equal(h.view.mode, 'screen');
+  const stopping = h.controller.setMode('manual'); h.client.last().resolve({ mode: 'manual' }); await stopping;
+  h.controller.toggle(LAMPS[1].id);
+  assert.deepEqual(plain(h.view.selected), [LAMPS[0].id, LAMPS[1].id], 'Manual confirmation unlocks selection');
+});
+
+test('screen manual controls preserve screen on failed stop and apply only confirmed result modes', async () => {
+  const h = harness(); await ready(h, { available: true, screenSync: true }); await discovered(h);
+  h.controller.toggle(LAMPS[0].id); await reviewed(h);
+  const active = h.controller.setMode('screen'); h.client.last().resolve({ mode: 'screen' }); await active;
+  const control = h.controller.power(false); assert.equal(h.view.mode, 'screen');
+  h.client.last().reject(Error('stop failed')); await control; assert.equal(h.view.mode, 'screen');
+  const manual = h.controller.setMode('manual'); assert.equal(h.view.mode, 'screen');
+  h.client.last().reject(Error('restore failed')); assert.equal(await manual, false); assert.equal(h.view.mode, 'screen');
+  const timeout = h.controller.setMode('manual'); h.expire(); await timeout;
+  assert.ok(h.view.mode === 'screen' || h.view.mode === null, 'timeout never invents Manual');
+  h.view.caps.wallpaperSync = true;
+  const switching = h.controller.setMode('ambient'); h.expire(); await switching;
+  assert.equal(h.view.mode, 'screen', 'an uncertain transition cannot unlock the old screen recipients');
+  const confirmed = h.controller.power(false);
+  h.client.last().resolve({ mode: 'manual', devices: [LAMPS[0]] }); await confirmed;
+  assert.equal(h.view.mode, 'manual');
+});
+
+test('a confirmed Manual clears a reviewed active capture and closing screen never sends a stop', async () => {
+  const h = harness(); await ready(h, { available: true, screenSync: true }); await discovered(h);
+  h.controller.toggle(LAMPS[0].id); await reviewed(h, { active: true });
+  assert.equal(h.view.mode, 'screen', 'a verified active backend cannot leave the UI in Manual');
+  const active = h.controller.setMode('screen'); h.client.last().resolve({ mode: 'screen' }); await active;
+  const before = h.client.names(); h.controller.close(); assert.deepEqual(h.client.names(), before);
+  const reopening = h.controller.open(); h.client.last().resolve({ available: true, screenSync: true, mode: 'screen' });
+  await flush(); h.client.last().resolve({ devices: [LAMPS[0]] }); await reopening;
+  await reviewed(h, { active: true }); assert.equal(h.view.screen.active, true);
+  const manual = h.controller.setMode('manual'); h.client.last().resolve({ mode: 'manual' }); await manual;
+  assert.equal(h.view.screen.active, false, 'the screen summary cannot remain Active after confirmed Manual');
+});
+
+test('Manual restores backend screen recipients after reopening with no saved selection', async () => {
+  const h = harness(); await ready(h, { available: true, mode: 'screen', screenSync: false });
+  assert.deepEqual(plain(h.view.selected), []);
+  const manual = h.controller.setMode('manual');
+  assert.equal(h.client.last().method, 'setMode', 'screen recovery must reach the backend without UI recipients');
+  assert.deepEqual(h.client.last().args, { mode: 'manual', source: 'wallpaper', ids: [] });
+  assert.equal(h.view.mode, 'screen', 'recovery stays pending until backend restoration is confirmed');
+  h.client.last().resolve({ mode: 'manual' }); assert.equal(await manual, true);
+  assert.equal(h.view.mode, 'manual'); assert.deepEqual(plain(h.view.selected), []);
+  const calls = h.client.names();
+  assert.equal(await h.controller.power(true), false);
+  assert.equal(await h.controller.setMode('manual'), false, 'ordinary Manual still requires selected lamps');
+  assert.deepEqual(h.client.names(), calls);
+});
+
+test('rendered Manual stays enabled for pending screen restoration without selected lamps', async () => {
+  function node(tag) {
+    return { tag, children: [], attributes: {}, style: {}, listeners: {}, disabled: false,
+      appendChild(child) { this.children.push(child); child.parentNode = this; },
+      setAttribute(key, value) { this.attributes[key] = value; }, getAttribute(key) { return this.attributes[key]; },
+      addEventListener(name, fn) { this.listeners[name] = fn; }, removeEventListener() {}, focus() {} };
+  }
+  const fields = {};
+  for (const name of ['lights-list', 'lights-controls', 'lights-close', 'lights-search', 'lights-summary', 'lights-status']) fields[name] = node('div');
+  const host = node('section'); host.querySelector = (selector) => fields[selector.slice(1)];
+  const sandbox = { window: { localStorage: memory() }, document: { activeElement: null, createElement: node }, Promise, Error, setTimeout, clearTimeout };
+  vm.runInNewContext(read('lights-panel.js'), sandbox);
+  const client = fakeClient(); const mounted = sandbox.window.LauncherLights.mount({ host, button: node('button'), client });
+  const h = { client, controller: mounted.controller, view: mounted.controller.view };
+  await ready(h, { available: true, mode: 'screen', screenSync: false });
+  const flatten = (n) => [n, ...n.children.flatMap(flatten)];
+  const controls = flatten(fields['lights-controls']);
+  const modes = controls.filter((n) => n.className === 'lights-chip lights-mode');
+  assert.equal(modes[0].disabled, false, 'Manual must remain reachable for backend restoration');
+  assert.ok(modes.slice(1).every((n) => n.disabled));
+  assert.ok(controls.filter((n) => /^lights-chip lights-(power|level|color|white)$/.test(n.className)).every((n) => n.disabled));
+  modes[0].listeners.click(); assert.equal(client.last().method, 'setMode');
+  assert.equal(modes[0].disabled, true, 'recovery cannot be submitted again while pending');
+  client.last().resolve({ mode: 'manual' }); await flush();
+  assert.equal(h.view.mode, 'manual'); assert.equal(modes[0].disabled, true);
+});
 
 test('creating the controller makes no request; opening asks only for capabilities', async () => {
   const h = harness();
@@ -347,10 +502,21 @@ test('rendered ambient controls describe only Mi pantalla and a color click retu
   const client = fakeClient();
   const mounted = sandbox.window.LauncherLights.mount({ host, button: node('button'), client });
   const h = { client, controller: mounted.controller, view: mounted.controller.view };
-  await ready(h, { available: true, mode: 'manual', wallpaperSync: true, screenSync: false }); await discovered(h);
+  await ready(h, { available: true, mode: 'manual', wallpaperSync: true, screenSync: false });
+  const flatten = (n) => [n, ...n.children.flatMap(flatten)];
+  const review = flatten(fields['lights-controls']).find((n) => n.className === 'lights-chip lights-screen-review');
+  assert.ok(review, 'capture review is rendered'); assert.equal(review.textContent, 'Revisar captura');
+  assert.equal(review.disabled, false, 'review does not require lamps');
+  assert.equal(review.attributes['aria-pressed'], undefined);
+  assert.deepEqual(client.names(), ['capabilities'], 'render and focus do not request capture status');
+  review.listeners.click(); assert.equal(client.last().method, 'screenStatus');
+  assert.deepEqual(client.last().args, { ids: [] });
+  client.last().resolve(Object.assign({}, SCREEN_READY, { configured: false, available: false,
+    configVerified: false, framesVerified: false, hardwareVerified: false, ready: false,
+    sourceFreshness: 'unknown', reason: 'setup-pending' })); await flush();
+  await discovered(h);
   h.controller.toggle('a8bb50000001');
   const pending = h.controller.setMode('ambient'); client.last().resolve({ mode: 'ambient' }); await pending;
-  const flatten = (n) => [n, ...n.children.flatMap(flatten)];
   const controls = flatten(fields['lights-controls']);
   const color = controls.find((n) => n.className === 'lights-chip lights-color');
   const whites = controls.filter((n) => n.className === 'lights-chip lights-white');

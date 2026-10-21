@@ -5,6 +5,13 @@ seis lámparas seleccionadas responden al brillo del 50 %. Ese control manual no
 Después de instalar la 0.5.1, el dueño también confirmó que Acompañar fondo funciona. El primer
 intento no lo mostró; sin un mensaje de error no se atribuye una causa a esa demora.
 
+La 0.6.0 agrega **Revisar captura**, transporte local para el diagnóstico de HyperHDR y una
+sesión de recuperación probada con dobles. Pasaron 206 pruebas y se verificó el paquete de
+52 archivos, incluidos 13 del servicio. El CLI aceptó la instalación y la orden de apertura;
+el usuario comprobó en la TV que Revisar captura informa falta de configuración. No volvió a
+validar los controles manuales ni el fondo en 0.6.0: su confirmación corresponde a 0.5/0.5.1.
+No se ejecutaron root, captura ni HyperHDR reales; root quedó expresamente pospuesto.
+
 ## Elegir y controlar las lámparas
 
 1. Abrí Luces. La primera consulta puede tardar unos segundos mientras el servicio busca las
@@ -36,11 +43,28 @@ manual detiene el acompañamiento; las luces conservan su último estado. Una or
 puede terminar después de detenerlo: detener el motor no revierte una orden física en curso.
 El modo no se reactiva automáticamente después de cerrar por completo o reiniciar la app.
 
-**Sincronizar pantalla** sigue deshabilitado. El canvas del launcher no ve YouTube, Netflix
-ni HDMI. Para esas fuentes se está evaluando captura local con root, PicCap y HyperHDR;
-no hay compatibilidad de captura comprobada para esta unidad. Las restricciones de contenido
-protegido deben probarse por separado. Un color del fondo no acredita sincronización del video.
-El estado y las pruebas pendientes están en [Colores de YouTube y HDMI](screen-sync.md).
+**Pantalla completa** sigue deshabilitado. El canvas del launcher no ve YouTube, Netflix ni
+HDMI. El backend actual rechaza siempre el arranque: no implementa una prueba de imágenes
+frescas ni de hardware. Configurar HyperHDR o verificar su perfil no alcanza para habilitarlo.
+Un color del fondo no acredita sincronización del video.
+
+**Revisar captura** hace una consulta únicamente al pulsarlo; no hace falta tener lámparas
+marcadas para solicitar el diagnóstico. No activa captura ni cambia la salida de luces. Muestra
+estados de preparación, falta de verificación o error mediante mensajes permitidos, sin exponer
+tokens, direcciones ni respuestas crudas. Sin configuración informa captura pendiente; una
+configuración comprobada sigue sin acreditar imágenes frescas. Abrir el panel o mover el foco
+no ejecuta esta revisión.
+
+La sesión de pantalla está preparada para guardar el estado anterior de las lámparas, confirmar
+la parada de la salida y restaurarlo antes de otros cambios. Una recuperación pendiente mantiene
+el modo Pantalla completa y bloquea cambios de selección; **Manual** sigue disponible aunque la
+selección local esté vacía. Si falla la parada o la restauración, no se confirma Manual ni se
+continúa con la nueva orden. Cerrar el panel u ocultar la app no envía una orden de parada de
+pantalla; Acompañar fondo conserva su pausa al quedar oculto.
+
+Estos contratos se probaron con dobles, incluida la recuperación; la restauración física no
+está validada. El backend actual no permite iniciar una sesión real. El estado y las pruebas
+pendientes están en [Colores de YouTube y HDMI](screen-sync.md).
 
 ## Cómo se comunica
 
@@ -49,9 +73,19 @@ con consultas `getPilot`/`getSystemConfig` y órdenes `setPilot`. No depende de 
 de un servidor en la computadora. El servicio acepta únicamente al identificador de nuestra app,
 valida los parámetros y vuelve a comprobar la identidad de cada lámpara antes de escribir.
 
-El servicio ofrece cinco métodos: `capabilities`, `discover`, `getState`, `setState` y `setMode`.
-No admite comandos de shell, puertos ni destinos arbitrarios. Solo permite direcciones privadas
-de la red local; la selección persistida usa identificadores, no direcciones IP.
+El servicio ofrece seis métodos: `capabilities`, `discover`, `getState`, `setState`, `setMode`
+y `screenStatus`. Este último consulta el diagnóstico. El adaptador HyperHDR se conecta únicamente
+a `127.0.0.1:19444`, autentica el token y confirma la instancia cero. La revisión consulta el
+perfil, la salida y la correspondencia de las lámparas; no habilita la salida ni selecciona
+una fuente de video. No admite comandos de shell, puertos ni destinos arbitrarios. El control
+WiZ solo permite direcciones privadas de la red local; la selección usa identificadores.
+
+El ejemplo público `screen-config.example.json` viene con `enabled: false` y token vacío.
+La configuración privada opcional se lee de
+`services/com.frxn.mipantalla.lights/screen-config.json`, excluido de Git. Sin ese archivo o con
+el diagnóstico deshabilitado no se abre la conexión HyperHDR. Una configuración habilitada no
+anula el bloqueo de captura. La configuración privada puede incluirse en un IPK local y no debe
+publicarse.
 
 El protocolo UDP local no incorpora autenticación criptográfica. El control presupone una red
 doméstica de confianza. La comprobación del emisor Luna no protege frente a quien ya tenga root.
@@ -69,7 +103,10 @@ npm exec --yes --package=@webos-tools/cli@3.2.6 -- ares-package dist services/co
 python scripts/verify_package.py
 ```
 
-El verificador compara tanto los archivos de `dist/` como los siete archivos del servicio.
+El verificador compara tanto los archivos de `dist/` como los 13 archivos del servicio; si existe
+`screen-config.json`, también exige que coincida. El IPK 0.6.0 verificado tiene 52 archivos y no
+incluye ese archivo privado opcional. El CLI aceptó la instalación y la orden de apertura;
+la comprobación física de 0.6.0 se limita al diagnóstico de captura sin configurar.
 No publiques un IPK que incluya tu configuración del hogar. El código del servicio solo usa
 módulos de Node disponibles en webOS 5; no agrega dependencias npm.
 

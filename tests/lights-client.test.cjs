@@ -6,7 +6,7 @@ const path=require('node:path');
 function load(sdk,onTV,timeoutMs=30,extra={}){
   const file=path.join(__dirname,'../lights-client.js');
   assert.ok(fs.existsSync(file),'WiZ UI client must exist');
-  const ctx={window:{LauncherAmbient:extra.ambient},Promise,Error,setTimeout,clearTimeout};
+  const ctx={window:{LauncherAmbient:extra.ambient},Promise,Error,setTimeout:extra.setTimer||setTimeout,clearTimeout:extra.clearTimer||clearTimeout};
   vm.runInNewContext(fs.readFileSync(file,'utf8'),ctx);
   return ctx.window.createLightsClient(sdk,onTV,Object.assign({timeoutMs},extra.options));
 }
@@ -80,4 +80,44 @@ test('a previous color response cannot confirm a new ambient selection',async()=
   sent[1].onSuccess({returnValue:true,devices:[{id:second,confirmed:true}]});
   assert.equal((await next).mode,'ambient');
   await cancelled;client.stopAmbient();
+});
+test('client preserves the backend screen mode and screen review never writes lights',async()=>{
+  const sent=[];
+  const client=load({service:{request(uri,o){sent.push(o);return {cancel(){}};}}},true,100);
+  const caps=client.capabilities();sent[0].onSuccess({returnValue:true,available:true,mode:'screen'});
+  assert.equal((await caps).mode,'screen');
+  const review=client.screenStatus({ids:[]});
+  assert.equal(sent[1].method,'screenStatus');sent[1].onSuccess({returnValue:true,ready:false,reason:'setup-pending'});
+  assert.equal((await review).ready,false);
+  const manual=client.setMode({mode:'manual'});sent[2].onFailure({errorText:'Restoration pending'});
+  await assert.rejects(manual,/Restoration pending/);
+  const again=client.capabilities();sent[3].onSuccess({returnValue:true,mode:'screen'});
+  assert.equal((await again).mode,'screen');
+});
+test('starting wallpaper after screen waits for confirmed backend restoration',async()=>{
+  let starts=0;const sent=[];
+  const ambient={create(o){return {start(ids){starts++;o.send([1,2,3],ids).catch(()=>{});},stop(){},refresh(){},visibilityChanged(){}};}};
+  const client=load({service:{request(uri,o){sent.push(o);return {cancel(){}};}}},true,100,{ambient,options:{source:()=> 'assets/wallpapers/moraine-lake.jpg'}});
+  const caps=client.capabilities();sent[0].onSuccess({returnValue:true,mode:'screen'});await caps;
+  const pending=client.setMode({mode:'ambient',source:'wallpaper',ids:['wiz-aabbcc001122']});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(starts,0);assert.equal(sent[1].method,'setMode');assert.equal(sent[1].parameters.mode,'manual');
+  sent[1].onFailure({errorText:'Stop not confirmed'});
+  await assert.rejects(pending,/Stop not confirmed/);assert.equal(starts,0);
+});
+test('the whole screen-to-wallpaper transition expires before the panel and cannot resume after a late restore',async()=>{
+  const timers=[];const sent=[];let starts=0;
+  const ambient={create(){return {start(){starts++;},stop(){},refresh(){},visibilityChanged(){}};}};
+  const client=load({service:{request(uri,o){sent.push(o);return {cancel(){}};}}},true,12000,{ambient,
+    options:{source:()=> 'assets/wallpapers/moraine-lake.jpg'},
+    setTimer:(fn,ms)=>{const t={fn,ms,cleared:false};timers.push(t);return t;},clearTimer:t=>{t.cleared=true;}});
+  const caps=client.capabilities();sent[0].onSuccess({returnValue:true,mode:'screen'});await caps;
+  const mode=client.setMode({mode:'ambient',source:'wallpaper',ids:['wiz-aabbcc001122']});
+  const rejected=assert.rejects(mode,/tiempo/i);
+  const deadline=timers.find(t=>!t.cleared&&t.ms===7500);
+  assert.ok(deadline,'one deadline covers restoration and first RGB confirmation');
+  deadline.fn();await rejected;
+  sent[1].onSuccess({returnValue:true,mode:'manual'});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(starts,0);assert.equal(sent.length,2);
 });

@@ -12,11 +12,36 @@ las del [tutorial](tutorial.md).
 | 0.4.1 | Ícono de Bedrock Records para Transitions. | Verificado en Brave; 77 pruebas aprobadas, IPK verificado e instalación/apertura aceptadas por CLI. Confirmación visual en TV pendiente. |
 | 0.5.0 | Panel Luces y servicio local WiZ. | El dueño confirmó lectura y brillo del 50 % en las seis lámparas del living desde la TV. |
 | 0.5.1 | Acompañar el color del fondo de Mi pantalla. | 147 pruebas aprobadas, IPK verificado e instalado; el dueño confirmó que el modo funciona en la TV. Captura completa deshabilitada. |
+| 0.6.0 | Revisar captura, transporte HyperHDR local y sesión de recuperación. | 206 pruebas aprobadas; IPK verificado de 52 archivos, 13 del servicio. Instalación y apertura aceptadas por CLI; el usuario comprobó en TV el diagnóstico de captura sin configurar. Captura completa bloqueada. |
 | — | Nuvio oficial 1.2.9 | Instalada, hash verificado, apertura aceptada. Sin probar login ni reproducción. |
 | — | Inventario de apps por SSAP | 124 apps leídas. Ver [cleaning.md](cleaning.md). |
 
 El uso, los modos y sus límites están en [Luces WiZ](lights.md). Root, captura de otras apps/HDMI,
 Home, autostart y eliminación de apps siguen pendientes de verificación en hardware.
+
+## 0.6: Preparación de captura y recuperación
+
+El panel incorpora **Revisar captura**, una consulta de solo lectura que se ejecuta únicamente
+al pulsarla. El adaptador autentica HyperHDR en `127.0.0.1:19444`, confirma la instancia cero y
+comprueba el perfil y las lámparas. El ejemplo `screen-config.example.json` viene deshabilitado;
+la configuración opcional privada `services/com.frxn.mipantalla.lights/screen-config.json` queda
+fuera de Git. Revisar el perfil no habilita la captura.
+
+La sesión con estado anterior persistido, parada confirmada y restauración está probada con
+dobles. Manual permite recuperar una sesión pendiente aunque no haya selección local guardada;
+un fallo no confirma restauración ni autoriza una nueva escritura. La restauración física todavía
+no fue validada.
+
+Pasaron 206 pruebas y se verificó el IPK de 52 archivos, incluidos 13 del servicio. El CLI aceptó
+la instalación y la orden de apertura. La vista previa se revisó en Brave a 1280×720 y 1920×1080,
+sin desbordes y con el botón visible; no contacta luces reales. El usuario comprobó en la TV que
+Revisar captura informa falta de configuración (`setup-pending`). No volvió a confirmar los
+controles manuales ni el fondo en 0.6.0; su confirmación física corresponde a 0.5/0.5.1.
+
+El backend actual rechaza **siempre** iniciar pantalla: faltan verificación de imágenes frescas
+y prueba de hardware. No se ejecutaron root, captura ni HyperHDR reales. El usuario pospuso
+expresamente root; esta entrega completa la preparación local, no la sincronización de YouTube
+o HDMI. [Detalles y validación pendiente](screen-sync.md).
 
 ## 0.4: Fotos diarias + Transitions (implementado; validación visual en TV pendiente)
 
@@ -102,11 +127,12 @@ asignar una app a un número del control.
 automático por lógica propia. Guía de LG:
 https://www.lg.com/es/soporte/guias-y-soluciones/television/webos-3-5-funcion-quick-access/ .
 
-## Root (no ejecutado)
+## Root (pospuesto por el usuario; no ejecutado)
 
-Esto queda documentado como trabajo en curso, **no como una instalación terminada**. El dueño
-autorizó root, arranque y limpieza. No se ejecutó todavía; el control WiZ y el fondo propio no lo requieren. La integración con Home y
-arranque exige trabajo adicional, explicado en [Root y Home](root-and-home.md).
+El usuario pospuso expresamente root para continuar primero con la integración de colores.
+La autorización anterior no cambia ese estado: no se ejecutaron root, captura ni HyperHDR reales.
+El control WiZ y el fondo propio no requieren root. La integración con Home y arranque exige
+trabajo adicional, explicado en [Root y Home](root-and-home.md).
 
 Lo que encontramos:
 

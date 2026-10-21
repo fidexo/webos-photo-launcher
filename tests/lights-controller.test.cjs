@@ -5,7 +5,7 @@ const path = require('node:path');
 const file=path.join(__dirname,'../services/com.frxn.mipantalla.lights/controller.js');
 const id='wiz-aabbcc001122';
 const ip=[192,168,50,20].join('.');
-function setup(query) {
+function setup(query, screen) {
   assert.ok(fs.existsSync(file),'WiZ controller must exist');
   let discoveryCount=0;
   const calls=[];
@@ -16,7 +16,7 @@ function setup(query) {
     calls.push({address,method,params});
     return query?query(address,method,params,calls):{mac:id.slice(4),state:true,dimming:40};
   }};
-  return {controller:require(file)(transport,{settle:()=>Promise.resolve()}),calls,discoveryCount:()=>discoveryCount};
+  return {controller:require(file)(transport,{settle:()=>Promise.resolve(),screenFactory:screen && (()=>screen)}),calls,discoveryCount:()=>discoveryCount};
 }
 
 test('WiZ controller discovers actual devices without selecting or changing any lights',async()=>{
@@ -89,4 +89,39 @@ test('WiZ does not advertise screen synchronization before capture has been veri
   const {controller}=setup();
   await assert.rejects(controller.setMode({mode:'ambient',source:'screen',ids:[id]}),/captura|disponible/i);
   assert.equal((await controller.setMode({mode:'manual',ids:[id]})).mode,'manual');
+});
+
+test('screen status is an explicit read and never changes lamps or claims capture readiness',async()=>{
+  let inspected=0;
+  const screen={pending:()=>null,status:async ids=>{inspected++;return {ready:false,reason:'setup-pending'};}};
+  const t=setup(null,screen);
+  assert.equal(t.controller.capabilities().screenSync,false);assert.equal(inspected,0);
+  assert.equal((await t.controller.screenStatus({ids:[]})).reason,'setup-pending');
+  assert.equal(inspected,1);assert.equal(t.calls.length,0);
+});
+test('manual commands wait for screen restoration and cannot proceed when restoration fails',async()=>{
+  const order=[];let pending=true,fail=true,on=true;
+  const screen={pending:()=>pending?{phase:'active'}:null,stop:async()=>{
+    order.push('stop-and-restore');if(fail)throw Error('SCREEN_RESTORE_PENDING');pending=false;return {active:false};}};
+  const t=setup((a,method,params)=>{order.push(method);if(method==='setPilot'){on=params.state;return {success:true};}
+    return {mac:id.slice(4),state:on,dimming:40};},screen);
+  assert.equal(t.controller.capabilities().mode,'screen');
+  await assert.rejects(t.controller.setState({ids:[id],rgb:[999,0,0]}),/inválid/i);
+  assert.deepEqual(order,[],'invalid input does not stop the existing mode');
+  await assert.rejects(t.controller.setState({ids:[id],on:false}),/SCREEN_RESTORE_PENDING/);
+  assert.deepEqual(order,['stop-and-restore']);assert.equal(t.calls.length,0);
+  fail=false;order.length=0;
+  const result=await t.controller.setState({ids:[id],on:false});
+  assert.deepEqual(order,['stop-and-restore','getPilot','setPilot','getPilot']);
+  assert.equal(result.mode,'manual');assert.equal(t.controller.capabilities().mode,'manual');
+});
+test('screen mode validates source and ids before delegating, while Manual restores pending state',async()=>{
+  const calls=[];let pending=true;
+  const t=setup(null,{pending:()=>pending?{}:null,start:async ids=>{calls.push(ids);return {active:true};},
+    stop:async()=>{calls.push('stop');pending=false;return {active:false};}});
+  await assert.rejects(t.controller.setMode({mode:'screen',source:'wallpaper',ids:[id]}));
+  assert.deepEqual(calls,[]);
+  assert.equal((await t.controller.setMode({mode:'screen',source:'screen',ids:[id]})).mode,'screen');
+  assert.equal((await t.controller.setMode({mode:'manual'})).mode,'manual');
+  assert.deepEqual(calls,[[id],'stop']);
 });

@@ -20,11 +20,17 @@ function matchesRequested(request, observed) {
   if (request.rgb && (!observed.rgb || request.rgb.some(function (v,i) { return Math.abs(v-observed.rgb[i]) > 2; }))) return false;
   return true;
 }
+function stateOf(payload) {
+  var state = {};
+  Object.keys(payload).forEach(function (key) { if (key !== 'ids') state[key] = payload[key]; });
+  return {state:state,parameters:protocol.command(state)};
+}
 module.exports = function createController(transport, options) {
   var settle = options && options.settle || function () { return new Promise(function (resolve) { setTimeout(resolve,200); }); };
   var records = {};
   var discovery = null;
   var writing = false;
+  var screen = null;
   function discover() {
     if (discovery) return discovery;
     discovery = transport.discover().then(function (found) {
@@ -65,9 +71,8 @@ module.exports = function createController(transport, options) {
   function setState(payload) {
     return Promise.resolve().then(function () {
       var ids = idsOf(payload);
-      var state = {};
-      Object.keys(payload).forEach(function (key) { if (key !== 'ids') state[key] = payload[key]; });
-      var parameters = protocol.command(state);
+      var checked = stateOf(payload);
+      var state = checked.state, parameters = checked.parameters;
       if (writing) throw Error('Hay un cambio de luces en curso.');
       writing = true;
       return ensure(ids).then(function () {
@@ -90,14 +95,44 @@ module.exports = function createController(transport, options) {
       },function (error) { writing = false; throw error; });
     });
   }
+  if (options && options.screenFactory) screen = options.screenFactory({
+    read:getState,
+    write:function (id, state) {
+      var payload = {ids:[id]};
+      Object.keys(state).forEach(function (key) { payload[key] = state[key]; });
+      return setState(payload).then(function (result) {
+        return {confirmed:result.devices.length === 1 && result.devices[0].id === id && result.devices[0].confirmed === true};
+      });
+    }
+  });
+  function stopScreen() { return screen && screen.pending() ? screen.stop() : Promise.resolve({active:false}); }
+  function manualState(payload) {
+    return Promise.resolve().then(function () {
+      idsOf(payload); stateOf(payload); // Validate before stopping any current output.
+      return stopScreen();
+    }).then(function () { return setState(payload); }).then(function (result) {
+      if (screen) result.mode = 'manual'; return result;
+    });
+  }
   return {
-    discover:discover,getState:getState,setState:setState,
+    discover:discover,getState:getState,setState:manualState,
+    screenStatus:function (payload) {
+      if (screen) return screen.status(payload && payload.ids || []);
+      return Promise.resolve({configured:false,available:false,ready:false,active:false,configVerified:false,
+        hardwareVerified:false,framesVerified:false,sourceFreshness:'unknown',reason:'setup-pending'});
+    },
     capabilities:function () {
-      return {available:true,screenSync:false,wallpaperSync:false,
+      return {available:true,screenSync:false,wallpaperSync:false,mode:screen && screen.pending() ? 'screen' : 'manual',
         reason:'La captura y la sincronización de imagen todavía no están verificadas en esta TV.'};
     },
     setMode:function (payload) {
-      if (payload && payload.mode === 'manual') return Promise.resolve({mode:'manual'});
+      if (payload && payload.mode === 'manual') return Promise.resolve().then(stopScreen).then(function () { return {mode:'manual'}; });
+      if (screen && payload && payload.mode === 'screen' && payload.source === 'screen') {
+        return Promise.resolve().then(function () { return screen.start(idsOf(payload)); }).then(function (result) {
+          if (!result || result.active !== true) throw Error('No se confirmó el modo pantalla.');
+          return {mode:'screen'};
+        });
+      }
       return Promise.reject(Error('La captura para este modo todavía no está disponible.'));
     }
   };

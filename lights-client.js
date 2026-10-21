@@ -16,7 +16,7 @@
     function stopAmbient() {
       generation++;
       if (ambient) ambient.stop();
-      mode = 'manual';
+      if (mode !== 'screen') mode = 'manual';
       finishMode(new Error('Se canceló el modo de acompañar fondo.'));
     }
     function hasAmbient() {
@@ -53,14 +53,27 @@
         return Promise.reject(new Error('Selección del living inválida.'));
       }
       stopAmbient();
-      var engine = getAmbient();
+      var intent = generation;
       return new Promise(function (resolve,reject) {
         pendingMode = {resolve:resolve,reject:reject,timer:setTimeout(function () {
           finishMode(new Error('No se pudo confirmar el color del fondo a tiempo.'));
           stopAmbient();
         },Math.min(options.timeoutMs || 7500,7500))};
-        try { engine.start(ids.slice()); }
-        catch (error) { finishMode(error); stopAmbient(); }
+        function fail(error) {
+          if (intent !== generation) return;
+          finishMode(error); stopAmbient();
+        }
+        function begin() {
+          if (intent !== generation || !pendingMode) return;
+          try { getAmbient().start(ids.slice()); } catch (error) { fail(error); }
+        }
+        if (mode === 'screen') {
+          request('setMode',{mode:'manual'}).then(function (result) {
+            if (intent !== generation || !pendingMode) return;
+            if (!result || result.mode !== 'manual') throw new Error('No se confirmó la restauración de las luces.');
+            mode = 'manual'; begin();
+          }).catch(fail);
+        } else begin();
       });
     }
     function request(method, payload) {
@@ -101,16 +114,26 @@
           reason:'Vista previa: las luces reales se controlan desde la TV.'});
         return request('capabilities',{}).then(function (result) {
           result.wallpaperSync = hasAmbient();
+          if (result.mode === 'screen') { stopAmbient(); mode = 'screen'; }
+          else if (result.mode === 'manual' && mode !== 'ambient') mode = 'manual';
           result.mode = mode;
           return result;
         });
       },
       discover:function () { return request('discover',{}); },
       getState:function (payload) { return request('getState',payload); },
-      setState:function (payload) { stopAmbient(); return request('setState',payload); },
+      screenStatus:function (payload) { return request('screenStatus',payload); },
+      setState:function (payload) {
+        stopAmbient(); return request('setState',payload).then(function (result) {
+          if (result.mode === 'manual') mode = 'manual'; return result;
+        });
+      },
       setMode:function (payload) {
         if (payload && payload.mode === 'ambient') return wallpaperMode(payload);
-        stopAmbient(); return request('setMode',payload);
+        stopAmbient(); return request('setMode',payload).then(function (result) {
+          if (result.mode === 'manual' || result.mode === 'screen') mode = result.mode;
+          return result;
+        });
       },
       stopAmbient:stopAmbient,
       refreshAmbient:function () { if (ambient) ambient.refresh(); },

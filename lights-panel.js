@@ -1,6 +1,6 @@
 // Luces WiZ del living: panel que controla solo las lámparas marcadas a mano. Este módulo no habla
 // con la red: usa el cliente que entrega el proyecto padre (capabilities, discover, getState, setState,
-// setMode). Pedidos: capabilities y getState al abrir; discover y cambios solo al pulsar OK.
+// setMode, screenStatus). Pedidos: capabilities y getState al abrir; el resto solo al pulsar OK.
 // Nada se da por aplicado sin respuesta: sin respuesta a tiempo, el estado queda desconocido.
 (function () {
   'use strict';
@@ -12,6 +12,16 @@
   var COLORS = [['Ámbar', [255, 150, 40]], ['Rojo', [255, 45, 55]], ['Rosa', [255, 85, 170]], ['Violeta', [150, 75, 255]], ['Azul', [45, 115, 255]], ['Verde', [40, 210, 115]]];
   var WHITES = [['Cálido', 2700], ['Neutro', 4000], ['Frío', 6500]];
   var MODES = [['manual', 'Manual'], ['ambient', 'Acompañar fondo'], ['screen', 'Pantalla completa']];
+  var SCREEN_REASONS = {
+    'setup-pending': 'captura pendiente de verificar en esta TV; falta configurar la captura.',
+    'config-invalid': 'revisá la configuración de captura.', 'offline': 'el servicio de captura no está disponible.',
+    'auth-required': 'la captura necesita autorización.', 'admin-required': 'la captura necesita permisos de administración.',
+    'instance-mismatch': 'la instancia de captura no coincide.', 'profile-mismatch': 'el perfil de captura no coincide.',
+    'selection-required': 'marcá las lámparas del living.', 'selection-mismatch': 'las lámparas no coinciden con el perfil de captura.',
+    'frames-unverified': 'captura pendiente de verificar en esta TV.', 'output-in-use': 'la salida de luces está en uso.',
+    'restore-pending': 'la restauración debe terminar antes de nuevos cambios.', 'busy': 'la captura está ocupada.',
+    'protocol-error': 'no se pudo verificar la captura.', 'timeout': 'la captura no respondió a tiempo.'
+  };
 
   function text(value, max) {
     if (typeof value !== 'string') return '';
@@ -40,6 +50,33 @@
   }
   function unknownState() { return { on: null, brightness: null, rgb: null, temperature: null }; }
   function errorText(error) { return text(error && error.message ? error.message : String(error || ''), 120) || 'error del servicio'; }
+  function emptyScreen(reason) {
+    return { configured: false, available: false, configVerified: false, framesVerified: false, hardwareVerified: false,
+      ready: false, active: false, sourceFreshness: 'unknown', reason: reason || 'setup-pending' };
+  }
+  function cleanScreen(raw) {
+    var fields = ['configured', 'available', 'configVerified', 'framesVerified', 'hardwareVerified', 'ready', 'active'];
+    if (!raw || typeof raw.reason !== 'string' || fields.some(function (key) { return typeof raw[key] !== 'boolean'; }) ||
+        ['unknown', 'fresh'].indexOf(raw.sourceFreshness) === -1 ||
+        (raw.reason !== '' && !Object.prototype.hasOwnProperty.call(SCREEN_REASONS, raw.reason))) return emptyScreen('protocol-error');
+    var result = emptyScreen();
+    fields.forEach(function (key) { result[key] = raw[key]; });
+    result.sourceFreshness = raw.sourceFreshness;
+    result.reason = raw.reason;
+    result.ready = raw.ready && raw.reason === '' && raw.configured && raw.available && raw.configVerified && raw.framesVerified && raw.hardwareVerified && raw.sourceFreshness === 'fresh';
+    result.active = raw.active && result.ready;
+    return result;
+  }
+  function screenAllowed(view) {
+    return !!(view.caps && view.caps.screenSync && view.screen.ready && view.screen.hardwareVerified && view.screen.framesVerified);
+  }
+  function screenNote(screen) {
+    if (screen.active) return 'Activo: captura de pantalla confirmada.';
+    if (screen.ready) return 'Preparado: captura verificada; elegí Pantalla completa para activarla.';
+    var reason = screen.reason || 'frames-unverified';
+    var label = reason === 'setup-pending' ? 'Preparado' : reason === 'frames-unverified' || reason === 'selection-required' ? 'No verificado' : 'Error';
+    return label + ': ' + SCREEN_REASONS[reason];
+  }
 
   function createController(options) {
     var getClient = typeof options.client === 'function' ? options.client : function () { return options.client; };
@@ -50,7 +87,7 @@
     var session = 0;
     var modeEpoch = 0;
     var modePending = false;
-    var view = { phase: 'closed', reason: '', caps: null, devices: [], selected: readSaved(), mode: null, busy: '', message: '', searched: false };
+    var view = { phase: 'closed', reason: '', caps: null, screen: emptyScreen(), devices: [], selected: readSaved(), mode: null, busy: '', message: '', searched: false };
 
     function readSaved() {
       try {
@@ -63,6 +100,11 @@
     function find(id) { return view.devices.filter(function (d) { return d.id === id; })[0] || null; }
     function targets() { return view.selected.filter(find); }
     function changed() { onChange(view); }
+    function confirmedMode(mode) {
+      if (!MODES.some(function (entry) { return entry[0] === mode; })) return;
+      view.mode = mode;
+      if (mode !== 'screen') view.screen.active = false;
+    }
     // Un pedido por vez; al cerrar o reabrir, las respuestas tardías se ignoran.
     function call(method, args, ms) {
       var epoch = session;
@@ -84,7 +126,7 @@
     }
     function start(label) { view.busy = label; view.message = ''; changed(); }
     function unavailable(reason) { view.phase = 'unavailable'; view.reason = reason; view.busy = ''; changed(); }
-    // Cambiar destinatarios o usar un control manual detiene solo el motor local, sin RPC.
+    // Solo detiene ambient local; screen permanece hasta que el backend confirme parada y restauración.
     function stopLocalAmbient() {
       modeEpoch += 1;
       if (modePending) { modePending = false; view.busy = ''; }
@@ -92,11 +134,11 @@
         var client = getClient();
         if (client && typeof client.stopAmbient === 'function') client.stopAmbient();
       } catch (error) {
-        view.mode = null;
+        if (view.mode !== 'screen') view.mode = null;
         view.message = 'No se pudo detener el seguimiento local: ' + errorText(error) + '.';
         return false;
       }
-      view.mode = 'manual';
+      if (view.mode !== 'screen') view.mode = 'manual';
       return true;
     }
 
@@ -105,6 +147,7 @@
       view.busy = '';
       var list = outcome.result !== undefined ? cleanList(outcome.result) : null;
       if (outcome.error) { view.message = 'No se pudo ' + verb + ': ' + outcome.error + '.'; changed(); return; }
+      if (outcome.result) confirmedMode(outcome.result.mode);
       var fresh = {};
       (list || []).forEach(function (d) { fresh[d.id] = d; });
       var count = { ok: 0, failed: 0, unknown: 0 };
@@ -148,6 +191,7 @@
         modeEpoch += 1; modePending = false;
         view.phase = 'checking';
         view.caps = null;
+        view.screen = emptyScreen();
         view.mode = null;
         view.devices = []; // el estado de otra apertura ya no vale: solo vuelven las confirmadas
         view.searched = false;
@@ -184,6 +228,7 @@
       },
       // Descubre lámparas; ninguna se marca sola y la selección guardada se revalida contra el resultado.
       discover: function () {
+        if (view.mode === 'screen') { view.message = 'Volvé a Manual antes de buscar o cambiar las lámparas del living.'; changed(); return Promise.resolve(false); }
         if (view.phase !== 'ready' || view.busy) return Promise.resolve(false);
         start('Buscando lámparas WiZ en la red…');
         return call('discover', undefined, DISCOVER_MS).then(function (outcome) {
@@ -199,6 +244,7 @@
           view.devices = list;
           view.searched = true;
           view.selected = view.selected.filter(find);
+          view.screen = emptyScreen();
           save();
           var dropped = before - view.selected.length;
           var stopFailed = dropped && !stopLocalAmbient();
@@ -210,7 +256,9 @@
       },
       toggle: function (id) {
         if (!find(id)) return;
+        if (view.mode === 'screen') { view.message = 'Volvé a Manual antes de cambiar las lámparas del living.'; changed(); return; }
         stopLocalAmbient();
+        view.screen = emptyScreen();
         var at = view.selected.indexOf(id);
         if (at === -1) view.selected.push(id); else view.selected.splice(at, 1);
         save();
@@ -220,25 +268,43 @@
       level: function (value) { return setState({ brightness: value }, 'cambiar el brillo'); },
       color: function (rgb) { return setState({ rgb: rgb.slice() }, 'cambiar el color'); },
       white: function (kelvin) { return setState({ temperature: kelvin }, 'cambiar el blanco'); },
+      screenStatus: function () {
+        if (view.phase !== 'ready' || view.busy) return Promise.resolve(false);
+        var epoch = modeEpoch;
+        view.screen = emptyScreen();
+        start('Revisando la captura…');
+        return call('screenStatus', { ids: view.selected.slice() }, TIMEOUT_MS).then(function (outcome) {
+          if (!outcome) return false;
+          view.busy = '';
+          if (epoch !== modeEpoch) { changed(); return false; }
+          view.screen = outcome.timeout ? emptyScreen('timeout') : outcome.error ? emptyScreen('protocol-error') : cleanScreen(outcome.result);
+          if (view.screen.active) confirmedMode('screen');
+          view.message = screenNote(view.screen);
+          changed();
+          return view.screen.ready;
+        });
+      },
       setMode: function (mode) {
         var ids = targets();
         var caps = view.caps || {};
-        var allowed = mode === 'manual' || (mode === 'ambient' && caps.wallpaperSync) || (mode === 'screen' && caps.screenSync);
-        if (view.phase !== 'ready' || view.busy || !ids.length || !allowed) return Promise.resolve(false);
+        var allowed = mode === 'manual' || (mode === 'ambient' && caps.wallpaperSync) || (mode === 'screen' && screenAllowed(view));
+        var restoring = mode === 'manual' && view.mode === 'screen';
+        if (view.phase !== 'ready' || view.busy || (!ids.length && !restoring) || !allowed) return Promise.resolve(false);
+        var previousMode = view.mode;
         if (!stopLocalAmbient()) { changed(); return Promise.resolve(false); }
         var epoch = ++modeEpoch;
         modePending = true;
         start('Cambiando el modo…');
-        // 'screen' no existe aún en el contrato: el pedido se arma recién cuando el servicio declare screenSync.
+        // El backend valida la captura y restaura el estado base antes de confirmar Manual.
         return call('setMode', { mode: mode, source: mode === 'screen' ? 'screen' : 'wallpaper', ids: ids.slice() }, TIMEOUT_MS).then(function (outcome) {
           if (epoch !== modeEpoch) return false;
           modePending = false;
           if (!outcome) return false;
           view.busy = '';
           var ok = !!(outcome.result && outcome.result.mode === mode);
-          if (outcome.timeout && mode !== 'manual') view.mode = null;
-          else if (ok) view.mode = mode;
-          view.message = ok ? '' : outcome.timeout ? (mode === 'manual' ? 'El seguimiento local está detenido; el servicio no confirmó el modo a tiempo.' : 'Sin respuesta a tiempo: el modo actual es desconocido.') : 'El servicio no confirmó el cambio de modo' + (outcome.error ? ': ' + outcome.error : '') + '.';
+          if (outcome.timeout && mode !== 'manual' && previousMode !== 'screen') view.mode = null;
+          else if (ok) confirmedMode(mode);
+          view.message = ok ? '' : outcome.timeout ? (mode === 'manual' && view.mode !== 'screen' ? 'El seguimiento local está detenido; el servicio no confirmó el modo a tiempo.' : 'Sin respuesta a tiempo: el modo actual es desconocido.') : 'El servicio no confirmó el cambio de modo' + (outcome.error ? ': ' + outcome.error : '') + '.';
           changed();
           return ok;
         });
@@ -319,6 +385,10 @@
     });
     row = group('Modo');
     MODES.forEach(function (entry) { chip(row, entry[1], 'mode', entry[0], function () { controller.setMode(entry[0]); }); });
+    var review = element('button', 'lights-chip lights-screen-review', 'Revisar captura');
+    review.type = 'button';
+    review.addEventListener('click', function () { controller.screenStatus(); });
+    row.appendChild(review);
     var note = element('p', 'lights-note');
     controls.appendChild(note);
 
@@ -348,7 +418,7 @@
         node.setAttribute('aria-checked', picked ? 'true' : 'false');
         node.setAttribute('data-lamp', d.id);
         node.setAttribute('aria-label', name + ', ' + describe(d) + (picked ? ', en el living' : ''));
-        node.disabled = view.phase !== 'ready';
+        node.disabled = view.phase !== 'ready' || view.mode === 'screen';
         node.appendChild(element('span', 'lights-check'));
         var label = element('span', 'lights-device-name', name);
         label.appendChild(element('small', '', describe(d)));
@@ -385,17 +455,19 @@
       q('.lights-status').textContent = view.busy || view.message;
       host.setAttribute('aria-busy', view.busy ? 'true' : 'false');
       renderList(view);
-      search.disabled = !ready;
+      search.disabled = !ready || view.mode === 'screen';
+      review.disabled = !ready || !!view.busy;
       chips.forEach(function (item) {
-        var allowed = act && (item.kind !== 'mode' || item.value === 'manual' || (item.value === 'ambient' ? caps.wallpaperSync : caps.screenSync));
+        var restoring = item.kind === 'mode' && item.value === 'manual' && view.mode === 'screen';
+        var allowed = restoring ? ready && !view.busy : act && (item.kind !== 'mode' || item.value === 'manual' || (item.value === 'ambient' ? caps.wallpaperSync : screenAllowed(view)));
         item.node.disabled = !allowed;
         item.node.setAttribute('aria-pressed', current[item.kind] !== null && String(current[item.kind]) === String(item.value) ? 'true' : 'false');
       });
       var notes = ['Modo actual: ' + (view.mode ? MODES.filter(function (m) { return m[0] === view.mode; })[0][1] : 'sin confirmar') + '.'];
       notes.push('Acompañar fondo: solo la foto de Mi pantalla; no otras apps ni HDMI.');
       if (!caps.wallpaperSync) notes.push('Acompañar fondo: pendiente del servicio de luces.');
-      if (!caps.screenSync) notes.push('Pantalla completa: captura pendiente de verificar en esta TV.');
-      if (!manual) notes.push('Un control manual detiene el seguimiento del fondo.');
+      notes.push('Pantalla completa — ' + screenNote(view.screen));
+      if (!manual) notes.push(view.mode === 'screen' ? 'Volvé a Manual para cambiar las lámparas; primero se detiene la captura y se restauran las luces.' : 'Un control manual detiene el seguimiento del fondo.');
       note.textContent = notes.join(' ');
       if (!open) return;
       if (autoFocus && view.phase !== 'checking' && !view.busy) { autoFocus = false; settle(); }
