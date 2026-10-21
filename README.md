@@ -9,6 +9,7 @@ abrió Homebrew Channel en la TV; no instala paquetes ni obtiene root por sí mi
 
 [**Tutorial completo**](docs/tutorial.md) · [Privacidad y limpieza](docs/privacy-cleanup.md) ·
 [Funciones futuras](docs/product-vision.md) · [Instalador desde el navegador](docs/browser-installer.md)
+· [Próximos pasos: rendimiento, referencias visuales, Flutter y wizard local](docs/next-steps.md)
 
 ## Qué ofrece hoy
 
