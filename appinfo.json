@@ -1,0 +1,12 @@
+{
+  "id": "com.frxn.mipantalla",
+  "version": "0.4.0",
+  "vendor": "FRXN",
+  "type": "web",
+  "main": "index.html",
+  "title": "Mi pantalla",
+  "icon": "icon.png",
+  "largeIcon": "icon.png",
+  "resolution": "1920x1080",
+  "disableBackHistoryAPI": true
+}

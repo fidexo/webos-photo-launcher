@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+  <!-- "Marea": cintas de luz sobre un cielo nocturno. Sin filtros: solo gradientes, barato de pintar en Chromium 68. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b1130"/>
+      <stop offset=".5" stop-color="#070a1c"/>
+      <stop offset="1" stop-color="#03040a"/>
+    </linearGradient>
+    <radialGradient id="glowCobalt" cx="1480" cy="260" r="980" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2f4dff" stop-opacity=".62"/>
+      <stop offset=".55" stop-color="#1c2aa8" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#1c2aa8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowTeal" cx="160" cy="1040" r="820" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0fb7cc" stop-opacity=".38"/>
+      <stop offset="1" stop-color="#0fb7cc" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowRose" cx="1880" cy="1000" r="640" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff4d7d" stop-opacity=".36"/>
+      <stop offset="1" stop-color="#ff4d7d" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="halo" cx="1530" cy="250" r="560" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff9a52" stop-opacity=".5"/>
+      <stop offset=".4" stop-color="#ff7a45" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#ff7a45" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="sun" cx="1500" cy="200" r="230" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff6e8"/>
+      <stop offset=".3" stop-color="#ffd7a3"/>
+      <stop offset=".66" stop-color="#ff9150"/>
+      <stop offset="1" stop-color="#ec4a35"/>
+    </radialGradient>
+    <linearGradient id="ribbonA" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#0a1250"/>
+      <stop offset=".34" stop-color="#1d39d4"/>
+      <stop offset=".6" stop-color="#5d7dff"/>
+      <stop offset=".8" stop-color="#2b47e4"/>
+      <stop offset="1" stop-color="#101c70"/>
+    </linearGradient>
+    <linearGradient id="ribbonB" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#06303f"/>
+      <stop offset=".38" stop-color="#11b5cf"/>
+      <stop offset=".68" stop-color="#8ef5ff"/>
+      <stop offset="1" stop-color="#1679ad"/>
+    </linearGradient>
+    <linearGradient id="ribbonC" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#3a0b2c"/>
+      <stop offset=".44" stop-color="#e03b74"/>
+      <stop offset=".72" stop-color="#ffb26e"/>
+      <stop offset="1" stop-color="#ff6a3d"/>
+    </linearGradient>
+    <linearGradient id="fold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".3"/>
+      <stop offset=".42" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".38"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#02030a" stop-opacity="0"/>
+      <stop offset=".6" stop-color="#02030a" stop-opacity="0"/>
+      <stop offset="1" stop-color="#02030a" stop-opacity=".5"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#sky)"/>
+  <rect width="1920" height="1080" fill="url(#glowCobalt)"/>
+  <rect width="1920" height="1080" fill="url(#glowTeal)"/>
+  <rect width="1920" height="1080" fill="url(#glowRose)"/>
+  <rect width="1920" height="1080" fill="url(#halo)"/>
+  <circle cx="1530" cy="250" r="168" fill="url(#sun)"/>
+
+  <!-- Cinta cobalto (la más ancha) -->
+  <path d="M-40 860C380 760 720 600 1080 610C1380 618 1600 500 1960 330L1960 640C1620 760 1360 820 1080 830C720 845 380 980-40 1100Z" fill="url(#ribbonA)" opacity=".94"/>
+  <path d="M-40 860C380 760 720 600 1080 610C1380 618 1600 500 1960 330L1960 640C1620 760 1360 820 1080 830C720 845 380 980-40 1100Z" fill="url(#fold)"/>
+  <!-- Cinta turquesa: cruza el sol -->
+  <path d="M-40 700C360 600 700 430 1040 440C1300 448 1480 330 1960 120L1960 250C1500 430 1320 540 1040 560C700 585 380 720-40 830Z" fill="url(#ribbonB)" opacity=".86"/>
+  <path d="M-40 700C360 600 700 430 1040 440C1300 448 1480 330 1960 120L1960 250C1500 430 1320 540 1040 560C700 585 380 720-40 830Z" fill="url(#fold)"/>
+  <!-- Cinta coral -->
+  <path d="M-40 1010C420 900 820 760 1180 760C1450 760 1650 680 1960 600L1960 690C1660 770 1460 840 1180 850C820 860 440 990-40 1110Z" fill="url(#ribbonC)" opacity=".9"/>
+  <path d="M-40 1010C420 900 820 760 1180 760C1450 760 1650 680 1960 600L1960 690C1660 770 1460 840 1180 850C820 860 440 990-40 1110Z" fill="url(#fold)"/>
+
+  <!-- Brillos especulares sobre el filo superior de cada cinta -->
+  <g fill="none" stroke="#fff" stroke-linecap="round">
+    <path d="M-40 700C360 600 700 430 1040 440C1300 448 1480 330 1960 120" stroke-width="7" stroke-opacity=".08"/>
+    <path d="M-40 700C360 600 700 430 1040 440C1300 448 1480 330 1960 120" stroke-width="1.6" stroke-opacity=".5"/>
+    <path d="M-40 860C380 760 720 600 1080 610C1380 618 1600 500 1960 330" stroke-width="7" stroke-opacity=".07"/>
+    <path d="M-40 860C380 760 720 600 1080 610C1380 618 1600 500 1960 330" stroke-width="1.4" stroke-opacity=".4"/>
+    <path d="M-40 1010C420 900 820 760 1180 760C1450 760 1650 680 1960 600" stroke-width="1.2" stroke-opacity=".38"/>
+  </g>
+
+  <rect width="1920" height="1080" fill="url(#floor)"/>
+</svg>

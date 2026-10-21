@@ -1,0 +1,314 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const path = require('node:path');
+
+const context = { window: {}, Math, JSON };
+vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'backgrounds.js'), 'utf8'), context);
+const B = context.window.LauncherBackgrounds;
+
+test('only local wallpaper paths (or inlined preview images) are accepted', () => {
+  const list = B.cleanList([
+    { src: 'assets/wallpapers/a.jpg', author: ' Ana ', source: 'https://www.example.org/photo/1' },
+    { src: 'assets/wallpapers/a.jpg' },
+    { src: 'assets/wallpapers/b.webp' },
+    { src: 'https://example.org/c.jpg' },
+    { src: '//example.org/c.jpg' },
+    { src: 'assets/wallpapers/../secret.jpg' },
+    { src: 'assets/wallpapers/sub/d.jpg' },
+    { src: 'assets/wallpapers/e.gif' },
+    { src: 'data:image/jpeg;base64,AAAA' },
+    null, 7, { src: 3 }
+  ]);
+  assert.deepEqual(Array.from(list, (entry) => entry.src), ['assets/wallpapers/a.jpg', 'assets/wallpapers/b.webp', 'data:image/jpeg;base64,AAAA']);
+  assert.equal(list[0].author, 'Ana');
+  assert.deepEqual(Array.from(B.cleanList(undefined)), []);
+  assert.deepEqual(Array.from(B.cleanList({ src: 'assets/wallpapers/a.jpg' })), []);
+});
+
+test('credits show author and source host', () => {
+  assert.equal(B.creditText({ author: 'Ana', source: 'https://www.example.org/photo/1' }), 'Foto: Ana · example.org');
+  assert.equal(B.creditText({ author: '', source: 'Archivo propio' }), 'Foto: Archivo propio');
+  assert.equal(B.creditText({ author: '', source: '' }), '');
+});
+
+function harness(list, failing = [], deferLoads = false) {
+  const state = { now: 0, hidden: false, timers: [], shown: [], loads: [], pending: [] };
+  const storage = { value: null, getItem() { return this.value; }, setItem(key, value) { this.value = value; } };
+  const layer = () => ({ image: { classList: { toggle() {} } }, frost: { classList: { toggle() {} } } });
+  const slideshow = B.createSlideshow({
+    layers: [layer(), layer()],
+    list,
+    fallback: 'assets/wallpaper.svg',
+    storage,
+    now: () => state.now,
+    isHidden: () => state.hidden,
+    setTimer: (fn, ms) => { const timer = { fn, ms }; state.timers.push(timer); return timer; },
+    clearTimer: (timer) => { state.timers = state.timers.filter((candidate) => candidate !== timer); },
+    load: (image, src, done) => {
+      state.loads.push(src);
+      if (deferLoads) state.pending.push({ src, done });
+      else done(failing.indexOf(src) === -1);
+    },
+    paint: () => true,
+    frostEnabled: () => true,
+    onShow: (entry) => state.shown.push(entry.src)
+  });
+  state.rotation = () => state.timers.filter((timer) => timer.ms === B.ROTATE_MS);
+  state.fire = (timer) => { state.timers = state.timers.filter((item) => item !== timer); timer.fn(); };
+  state.runAll = () => { const timers = state.timers; state.timers = []; timers.forEach((timer) => timer.fn()); };
+  return { slideshow, state, storage };
+}
+
+test('without a list, the SVG fallback is shown once and nothing rotates', () => {
+  for (const list of [undefined, [], [{ src: 'https://example.org/x.jpg' }]]) {
+    const { slideshow, state } = harness(list);
+    slideshow.start();
+    assert.deepEqual(state.shown, ['assets/wallpaper.svg']);
+    assert.equal(slideshow.isFallback(), true);
+    assert.equal(state.timers.length, 0);
+  }
+});
+
+test('a single photo is shown without a rotation timer', () => {
+  const { slideshow, state } = harness([{ src: 'assets/wallpapers/a.jpg' }]);
+  slideshow.start();
+  assert.deepEqual(state.shown, ['assets/wallpapers/a.jpg']);
+  assert.equal(state.timers.length, 0);
+});
+
+test('rotates every 5 minutes, preloading the next photo after the fade', () => {
+  const { slideshow, state, storage } = harness([{ src: 'assets/wallpapers/a.jpg' }, { src: 'assets/wallpapers/b.jpg' }, { src: 'assets/wallpapers/c.jpg' }]);
+  slideshow.start();
+  assert.deepEqual(state.shown, ['assets/wallpapers/a.jpg']);
+  assert.equal(state.rotation().length, 1);
+  const preload = state.timers.find((timer) => timer.ms < B.ROTATE_MS);
+  assert.ok(preload.ms >= B.FADE_MS, 'the outgoing layer is not replaced mid-fade');
+  preload.fn();
+  assert.deepEqual(state.loads, ['assets/wallpapers/a.jpg', 'assets/wallpapers/b.jpg']);
+  state.now += B.ROTATE_MS;
+  state.rotation()[0].fn();
+  assert.deepEqual(state.shown, ['assets/wallpapers/a.jpg', 'assets/wallpapers/b.jpg']);
+  assert.equal(state.loads.length, 2, 'swap used the preloaded layer');
+  assert.equal(storage.value, 'assets/wallpapers/b.jpg');
+});
+
+test('resumes after the last photo shown in a previous session', () => {
+  const { slideshow, state, storage } = harness([{ src: 'assets/wallpapers/a.jpg' }, { src: 'assets/wallpapers/b.jpg' }]);
+  storage.value = 'assets/wallpapers/a.jpg';
+  slideshow.start();
+  assert.deepEqual(state.shown, ['assets/wallpapers/b.jpg']);
+});
+
+test('failed photos are skipped; if all fail, the SVG fallback is used', () => {
+  const skip = harness([{ src: 'assets/wallpapers/a.jpg' }, { src: 'assets/wallpapers/b.jpg' }], ['assets/wallpapers/a.jpg']);
+  skip.slideshow.start();
+  assert.deepEqual(skip.state.shown, ['assets/wallpapers/b.jpg']);
+  assert.equal(skip.state.timers.length, 0, 'one usable photo left: no rotation');
+
+  const all = harness([{ src: 'assets/wallpapers/a.jpg' }, { src: 'assets/wallpapers/b.jpg' }], ['assets/wallpapers/a.jpg', 'assets/wallpapers/b.jpg']);
+  all.slideshow.start();
+  assert.deepEqual(all.state.shown, ['assets/wallpaper.svg']);
+  assert.equal(all.slideshow.isFallback(), true);
+});
+
+test('pauses while hidden and advances on return when the interval elapsed', () => {
+  const { slideshow, state } = harness([{ src: 'assets/wallpapers/a.jpg' }, { src: 'assets/wallpapers/b.jpg' }]);
+  slideshow.start();
+  state.hidden = true;
+  slideshow.visibilityChanged();
+  assert.equal(state.rotation().length, 0, 'rotation timer cleared while hidden');
+  state.now += 2 * 60000;
+  state.hidden = false;
+  slideshow.visibilityChanged();
+  assert.equal(state.shown.length, 1, 'not due yet');
+  assert.equal(state.rotation().length, 0);
+  assert.equal(state.timers.some((timer) => timer.ms === 3 * 60000), true, 'waits the remaining time');
+  state.hidden = true;
+  slideshow.visibilityChanged();
+  state.now += 10 * 60000;
+  state.hidden = false;
+  slideshow.visibilityChanged();
+  assert.deepEqual(state.shown, ['assets/wallpapers/a.jpg', 'assets/wallpapers/b.jpg']);
+});
+
+test('pauses pending preloads while hidden and starts them again on return', () => {
+  const { slideshow, state } = harness([{ src: 'assets/wallpapers/a.jpg' }, { src: 'assets/wallpapers/b.jpg' }]);
+  slideshow.start();
+  const pendingPreload = state.timers.find((timer) => timer.ms < B.ROTATE_MS);
+  state.hidden = true;
+  slideshow.visibilityChanged();
+  assert.equal(state.timers.length, 0, 'both rotation and deferred preload are cancelled');
+  pendingPreload.fn(); // A callback already queued at the visibility boundary must also pause.
+  assert.deepEqual(state.loads, ['assets/wallpapers/a.jpg']);
+  state.hidden = false;
+  state.now = 60000;
+  slideshow.visibilityChanged();
+  const resumedPreload = state.timers.find((timer) => timer.ms < B.FADE_MS + 1000);
+  assert.ok(resumedPreload, 'preloading is restored without waiting five minutes');
+  state.fire(resumedPreload);
+  assert.deepEqual(state.loads, ['assets/wallpapers/a.jpg', 'assets/wallpapers/b.jpg']);
+});
+
+test('keeps the rotation scheduled when returning during an in-flight preload', () => {
+  const { slideshow, state } = harness([{ src: 'assets/wallpapers/a.jpg' }, { src: 'assets/wallpapers/b.jpg' }], [], true);
+  slideshow.start();
+  state.pending.shift().done(true);
+  state.now = B.FADE_MS + 200;
+  state.fire(state.timers.find((timer) => timer.ms < B.ROTATE_MS));
+  state.hidden = true;
+  slideshow.visibilityChanged();
+  state.hidden = false;
+  state.now = 2000;
+  slideshow.visibilityChanged();
+  state.pending.shift().done(true);
+  const rotation = state.timers.find((timer) => timer.ms === B.ROTATE_MS - state.now);
+  assert.ok(rotation, 'returning while busy must not lose the only rotation timer');
+  state.now = B.ROTATE_MS;
+  state.fire(rotation);
+  assert.deepEqual(state.shown, ['assets/wallpapers/a.jpg', 'assets/wallpapers/b.jpg']);
+  assert.equal(state.loads.length, 2, 'the completed preload is reused');
+});
+
+test('a loaded photo is used even if decode() never settles; a broken one fails', () => {
+  const timers = [];
+  const fake = { window: {}, Math, JSON, setTimeout: (fn, ms) => { const timer = { fn, ms }; timers.push(timer); return timer; }, clearTimeout: (timer) => { const at = timers.indexOf(timer); if (at !== -1) timers.splice(at, 1); } };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'backgrounds.js'), 'utf8'), fake);
+  const results = [];
+  const hanging = { decode: () => new Promise(() => {}) };
+  fake.window.LauncherBackgrounds.loadImage(hanging, 'assets/wallpapers/a.jpg', (ok) => results.push(ok));
+  hanging.onload();
+  assert.equal(timers.length, 1, 'only the short decode wait remains');
+  assert.ok(timers[0].ms <= 3000);
+  timers.shift().fn();
+  const broken = {};
+  fake.window.LauncherBackgrounds.loadImage(broken, 'assets/wallpapers/b.jpg', (ok) => results.push(ok));
+  broken.onerror();
+  assert.deepEqual(results, [true, false]);
+});
+
+// ---------- Galería del día (replace) ----------
+const remote = (n, extra) => Object.assign({
+  src: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/P' + n + '.jpg/1920px-P' + n + '.jpg',
+  author: 'Ana', license: 'CC BY-SA 4.0', licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+  page: 'https://commons.wikimedia.org/wiki/File:P' + n + '.jpg', title: 'P' + n
+}, extra);
+const LOCAL = [{ src: 'assets/wallpapers/a.jpg', author: 'A' }, { src: 'assets/wallpapers/b.jpg', author: 'B' }];
+
+test('remote photos are accepted only through replace, from Wikimedia hosts, with credits', () => {
+  assert.deepEqual(Array.from(B.cleanList([remote(1)])), [], 'wallpapers.js stays local-only');
+  const clean = B.cleanList([
+    remote(1),
+    remote(2, { src: 'https://upload.wikimedia.org.evil.com/wikipedia/commons/a/ab/x.jpg' }),
+    remote(3, { src: 'http://upload.wikimedia.org/wikipedia/commons/a/ab/x.jpg' }),
+    remote(4, { src: 'https://user@upload.wikimedia.org/wikipedia/commons/a/ab/x.jpg' }),
+    remote(5, { src: 'https://upload.wikimedia.org/wikipedia/commons/a/ab/x.png' }),
+    remote(6, { author: '' }),
+    remote(7, { license: '' }),
+    remote(8, { page: 'https://evil.example/wiki/File:P8.jpg' }),
+    remote(9, { licenseUrl: 'javascript:alert(1)', src: 'https://upload.wikimedia.org/wikipedia/commons/a/ab/P9.jpg' })
+  ], true);
+  assert.deepEqual(Array.from(clean, (entry) => entry.title), ['P1', 'P9']);
+  assert.equal(clean[1].licenseUrl, '', 'an unsafe licence link is dropped, not shown');
+  assert.equal(B.creditText(clean[0]), 'Foto: Ana · Wikimedia Commons · CC BY-SA 4.0');
+  const details = Array.from(B.sourceDetails(clean[0]), (pair) => pair.join(': '));
+  assert.deepEqual(details, ['Foto: P1', 'Autor: Ana', 'Licencia: CC BY-SA 4.0 · https://creativecommons.org/licenses/by-sa/4.0', 'Origen: Wikimedia Commons · https://commons.wikimedia.org/wiki/File:P1.jpg']);
+});
+
+test('replace waits for the first local photo and its fade, then crossfades to the new gallery', () => {
+  const { slideshow, state } = harness(LOCAL, [], true);
+  slideshow.start();
+  assert.equal(slideshow.replace([remote(1), remote(2)]), true);
+  assert.deepEqual(state.loads, ['assets/wallpapers/a.jpg'], 'the local photo is not interrupted');
+  state.pending.shift().done(true);
+  assert.deepEqual(state.shown, ['assets/wallpapers/a.jpg']);
+  const apply = state.timers.find((timer) => timer.ms < B.ROTATE_MS);
+  assert.ok(apply.ms >= B.FADE_MS, 'the outgoing layer is not replaced mid-fade');
+  state.fire(apply);
+  assert.equal(state.loads[1], remote(1).src);
+  state.pending.shift().done(true);
+  assert.deepEqual(state.shown, ['assets/wallpapers/a.jpg', remote(1).src]);
+  assert.equal(slideshow.isReplaced(), true);
+  assert.equal(state.rotation().length, 1, 'a single rotation timer');
+});
+
+test('callbacks from the previous gallery cannot touch the new one', () => {
+  const { slideshow, state } = harness(LOCAL, [], true);
+  slideshow.start();
+  state.pending.shift().done(true); // a a la vista
+  state.fire(state.timers.find((timer) => timer.ms < B.ROTATE_MS)); // precarga b (en curso)
+  const stale = state.pending.shift();
+  assert.equal(stale.src, 'assets/wallpapers/b.jpg');
+  slideshow.replace([remote(1), remote(2)]);
+  stale.done(true); // llega tarde: debe ignorarse
+  stale.done(false);
+  state.fire(state.timers.find((timer) => timer.ms < B.ROTATE_MS));
+  assert.equal(state.loads[state.loads.length - 1], remote(1).src, 'the busy flag was not left stuck by the stale load');
+  state.pending.shift().done(true);
+  assert.deepEqual(state.shown, ['assets/wallpapers/a.jpg', remote(1).src]);
+  state.fire(state.timers.find((timer) => timer.ms < B.ROTATE_MS));
+  state.pending.shift().done(true); // precarga r2
+  state.now += B.ROTATE_MS;
+  state.fire(state.rotation()[0]);
+  assert.deepEqual(state.shown, ['assets/wallpapers/a.jpg', remote(1).src, remote(2).src], 'rotation continues inside the new gallery');
+});
+
+test('if no remote photo loads, the local gallery keeps rotating (no SVG, no flash)', () => {
+  const { slideshow, state } = harness(LOCAL, [remote(1).src, remote(2).src]);
+  slideshow.start();
+  state.fire(state.timers.find((timer) => timer.ms < B.ROTATE_MS)); // precarga b
+  state.now = 60000;
+  slideshow.replace([remote(1), remote(2)]);
+  state.fire(state.timers.find((timer) => timer.ms < B.ROTATE_MS));
+  assert.deepEqual(state.shown, ['assets/wallpapers/a.jpg'], 'the visible local photo stayed');
+  assert.equal(slideshow.isReplaced(), false);
+  assert.equal(slideshow.isFallback(), false);
+  const rotation = state.rotation().concat(state.timers.filter((timer) => timer.ms === B.ROTATE_MS - 60000));
+  assert.equal(rotation.length, 1, 'rotation resumes with the remaining time');
+  state.now = B.ROTATE_MS;
+  state.fire(rotation[0]);
+  assert.equal(state.shown[state.shown.length - 1], 'assets/wallpapers/b.jpg');
+});
+
+test('a gallery received while hidden waits for the return and does not advance twice', () => {
+  const { slideshow, state } = harness(LOCAL);
+  slideshow.start();
+  state.hidden = true;
+  slideshow.visibilityChanged();
+  slideshow.replace([remote(1), remote(2)]);
+  assert.equal(state.timers.length, 0, 'nothing runs while hidden');
+  assert.deepEqual(state.loads, ['assets/wallpapers/a.jpg']);
+  state.now += 10 * 60000;
+  state.hidden = false;
+  slideshow.visibilityChanged();
+  assert.deepEqual(state.shown, ['assets/wallpapers/a.jpg'], 'no extra local advance before the new gallery');
+  state.fire(state.timers.find((timer) => timer.ms < B.ROTATE_MS));
+  assert.equal(state.shown[state.shown.length - 1], remote(1).src);
+});
+
+test('an empty or invalid gallery is ignored', () => {
+  const { slideshow, state } = harness(LOCAL);
+  slideshow.start();
+  const before = state.timers.length;
+  for (const list of [undefined, [], [{ src: 'https://example.org/x.jpg' }], [remote(1, { author: '' })]]) {
+    assert.equal(slideshow.replace(list), false);
+  }
+  assert.equal(state.timers.length, before);
+  assert.equal(slideshow.isReplaced(), false);
+});
+
+test('a stale load timeout does not clear the handlers of a newer load on the same image', () => {
+  const timers = [];
+  const fake = { window: {}, Math, JSON, setTimeout: (fn, ms) => { const timer = { fn, ms }; timers.push(timer); return timer; }, clearTimeout: (timer) => { const at = timers.indexOf(timer); if (at !== -1) timers.splice(at, 1); } };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'backgrounds.js'), 'utf8'), fake);
+  const results = [];
+  const image = {};
+  fake.window.LauncherBackgrounds.loadImage(image, 'assets/wallpapers/a.jpg', (ok) => results.push('a:' + ok));
+  fake.window.LauncherBackgrounds.loadImage(image, 'assets/wallpapers/b.jpg', (ok) => results.push('b:' + ok));
+  const newer = image.onload;
+  timers.shift().fn(); // vence la guarda de la primera carga
+  assert.equal(image.onload, newer, 'the newer handlers survive');
+  image.onload();
+  assert.deepEqual(results, ['a:false', 'b:true']);
+});

@@ -1,0 +1,12 @@
+node_modules/
+vendor/lg-sdk.zip
+vendor/sdk-source/
+dist/
+artifacts/
+.env
+.env.*
+*.pem
+*.key
+*.epk
+__pycache__/
+weather-config.js
