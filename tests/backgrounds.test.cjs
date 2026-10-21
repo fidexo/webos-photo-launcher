@@ -33,21 +33,27 @@ test('credits show author and source host', () => {
   assert.equal(B.creditText({ author: '', source: '' }), '');
 });
 
-function harness(list, failing = [], deferLoads = false) {
-  const state = { now: 0, hidden: false, timers: [], shown: [], loads: [], pending: [] };
+function harness(list, failing = [], deferLoads = false, initialList) {
+  const state = { now: 0, hidden: false, timers: [], shown: [], loads: [], loadOptions: [], pending: [] };
   const storage = { value: null, getItem() { return this.value; }, setItem(key, value) { this.value = value; } };
-  const layer = () => ({ image: { classList: { toggle() {} } }, frost: { classList: { toggle() {} } } });
+  const element = () => {
+    const classes = new Set();
+    return { classList: { toggle(name, on) { if (on) classes.add(name); else classes.delete(name); }, contains(name) { return classes.has(name); } } };
+  };
+  const layer = () => ({ image: element(), frost: element() });
+  state.layers = [layer(), layer()];
   const slideshow = B.createSlideshow({
-    layers: [layer(), layer()],
-    list,
+    layers: state.layers,
+    list, initialList,
     fallback: 'assets/wallpaper.svg',
     storage,
     now: () => state.now,
     isHidden: () => state.hidden,
     setTimer: (fn, ms) => { const timer = { fn, ms }; state.timers.push(timer); return timer; },
     clearTimer: (timer) => { state.timers = state.timers.filter((candidate) => candidate !== timer); },
-    load: (image, src, done) => {
+    load: (image, src, done, options) => {
       state.loads.push(src);
+      state.loadOptions.push(options);
       if (deferLoads) state.pending.push({ src, done });
       else done(failing.indexOf(src) === -1);
     },
@@ -196,7 +202,140 @@ const remote = (n, extra) => Object.assign({
 }, extra);
 const LOCAL = [{ src: 'assets/wallpapers/a.jpg', author: 'A' }, { src: 'assets/wallpapers/b.jpg', author: 'B' }];
 
-test('remote photos are accepted only through replace, from Wikimedia hosts, with credits', () => {
+test('cached metadata starts at the stored photo immediately, without loading a local first', () => {
+  for (const last of [remote(2).src, 'assets/wallpapers/a.jpg', null]) {
+    const { slideshow, state, storage } = harness(LOCAL, [], true, [remote(1), remote(2)]);
+    storage.value = last;
+    slideshow.start();
+    const expected = last === remote(2).src ? last : remote(1).src;
+    assert.deepEqual(state.loads, [expected]);
+    assert.equal(state.timers.length, 0, 'no startup fade timer delays the cached request');
+    state.pending.shift().done(true);
+    assert.deepEqual(state.shown, [expected]);
+    assert.equal(slideshow.current().author, 'Ana');
+    assert.equal(slideshow.current().provider, 'Wikimedia Commons');
+    assert.equal(slideshow.current().license, 'CC BY-SA 4.0');
+    assert.equal(slideshow.current().page, last === remote(2).src ? remote(2).page : remote(1).page);
+  }
+});
+
+test('invalid initial metadata retains the local startup order and allowlist', () => {
+  for (const initial of [undefined, [], [remote(1, { author: '' })], [remote(1, { src: 'https://evil.example/x.jpg' })]]) {
+    const { slideshow, state, storage } = harness(LOCAL, [], false, initial);
+    storage.value = LOCAL[0].src;
+    slideshow.start();
+    assert.deepEqual(state.loads, [LOCAL[1].src]);
+    assert.equal(slideshow.isReplaced(), false);
+  }
+});
+
+test('the first cached failure returns directly to the credited local base, without trying other remotes', () => {
+  const { slideshow, state } = harness(LOCAL, [remote(1).src], false, [remote(1), remote(2)]);
+  slideshow.start();
+  assert.deepEqual(state.loads, [remote(1).src, LOCAL[0].src]);
+  assert.deepEqual(state.shown, [LOCAL[0].src]);
+  assert.equal(slideshow.current().author, 'A');
+  assert.equal(slideshow.isReplaced(), false);
+  assert.equal(slideshow.isFallback(), false);
+  const empty = harness([], [remote(1).src], false, [remote(1), remote(2)]);
+  empty.slideshow.start();
+  assert.deepEqual(empty.state.loads, [remote(1).src, 'assets/wallpaper.svg']);
+  assert.equal(empty.slideshow.isFallback(), true);
+});
+
+test('only the first visible swap is immediate; preloading and later swaps keep the normal fade', () => {
+  const { slideshow, state } = harness(LOCAL);
+  slideshow.start();
+  assert.equal(state.loadOptions[0].immediate, true);
+  for (const [index, layer] of state.layers.entries()) {
+    assert.equal(layer.image.classList.contains('is-initial'), index === 0);
+    assert.equal(layer.frost.classList.contains('is-initial'), index === 0);
+  }
+  state.fire(state.timers.find((timer) => timer.ms < B.ROTATE_MS));
+  assert.equal(state.loadOptions[1].immediate, false);
+  state.now = B.ROTATE_MS;
+  state.fire(state.rotation()[0]);
+  assert.deepEqual(state.shown, [LOCAL[0].src, LOCAL[1].src]);
+  for (const layer of state.layers) {
+    assert.equal(layer.image.classList.contains('is-initial'), false);
+    assert.equal(layer.frost.classList.contains('is-initial'), false);
+  }
+});
+
+function loaderHarness() {
+  const timers = [];
+  const fake = { window: {}, Math, JSON, setTimeout: (fn, ms) => { const timer = { fn, ms }; timers.push(timer); return timer; }, clearTimeout: (timer) => { const at = timers.indexOf(timer); if (at !== -1) timers.splice(at, 1); } };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'backgrounds.js'), 'utf8'), fake);
+  return { B: fake.window.LauncherBackgrounds, fake, timers };
+}
+
+test('an immediate first image finishes on load without waiting for decode', () => {
+  const { B: loader, timers } = loaderHarness();
+  const results = [];
+  let decodes = 0;
+  const image = { decode() { decodes += 1; return new Promise(() => {}); } };
+  loader.loadImage(image, remote(1).src, (ok) => results.push(ok), { immediate: true });
+  image.onload();
+  assert.deepEqual(results, [true]);
+  assert.equal(decodes, 0);
+  assert.equal(timers.length, 0);
+});
+
+test('only an immediate remote request has a 1500ms maximum wait and finishes once', () => {
+  for (const [src, options, timeout] of [[remote(1).src, { immediate: true }, 1500], [LOCAL[0].src, { immediate: true }, 15000], [remote(1).src, { immediate: false }, 15000]]) {
+    const { B: loader, timers } = loaderHarness();
+    const results = [];
+    const image = {};
+    loader.loadImage(image, src, (ok) => results.push(ok), options);
+    const lateLoad = image.onload;
+    assert.equal(timers[0].ms, timeout);
+    timers[0].fn();
+    lateLoad();
+    assert.deepEqual(results, [false]);
+  }
+});
+
+test('mount forwards cached metadata before its first image request', () => {
+  const { B: mounted, fake } = loaderHarness();
+  const image = () => ({ classList: { toggle() {} } });
+  const images = [image(), image()];
+  fake.window.LAUNCHER_WALLPAPERS = LOCAL;
+  fake.window.addEventListener = () => {};
+  fake.document = { hidden: false, addEventListener() {} };
+  const slideshow = mounted.mount({ images, frosts: [image(), image()], fallback: 'assets/wallpaper.svg', initialList: [remote(1)] });
+  assert.equal(images[0].src, remote(1).src);
+  images[0].onload();
+  assert.equal(slideshow.current().src, remote(1).src);
+});
+
+test('a cached startup timeout immediately loads the credited local base and ignores the late remote', () => {
+  const { B: mounted, fake, timers } = loaderHarness();
+  const image = () => ({ classList: { toggle() {} } });
+  const images = [image(), image()];
+  const shown = [];
+  const credit = {};
+  fake.window.LAUNCHER_WALLPAPERS = LOCAL;
+  fake.window.addEventListener = () => {};
+  fake.document = { hidden: false, addEventListener() {} };
+  const slideshow = mounted.mount({ images, frosts: [image(), image()], credit, fallback: 'assets/wallpaper.svg', initialList: [remote(1), remote(2)], onShow: (entry) => shown.push(entry.src) });
+  const lateRemote = images[0].onload;
+  assert.equal(timers.length, 1);
+  assert.equal(timers[0].ms, 1500);
+  timers[0].fn();
+  assert.equal(images[0].src, LOCAL[0].src, 'the next request is local, without a timer or second remote');
+  const localLoaded = images[0].onload;
+  lateRemote();
+  assert.equal(images[0].onload, localLoaded);
+  assert.deepEqual(shown, []);
+  localLoaded();
+  assert.deepEqual(shown, [LOCAL[0].src]);
+  assert.equal(credit.textContent, 'Foto: A');
+  assert.equal(credit.hidden, false);
+  assert.equal(slideshow.current().author, 'A');
+  assert.equal(slideshow.isReplaced(), false);
+});
+
+test('remote photos are accepted only explicitly, from Wikimedia hosts, with credits', () => {
   assert.deepEqual(Array.from(B.cleanList([remote(1)])), [], 'wallpapers.js stays local-only');
   const clean = B.cleanList([
     remote(1),

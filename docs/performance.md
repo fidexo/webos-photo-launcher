@@ -61,3 +61,69 @@ un arranque en frío con esta configuración.
 
 Las tres apps LG retiradas, los ajustes publicitarios adicionales y su recuperación están en
 [Limpieza](cleaning.md).
+
+## 0.7.3: primer fondo
+
+La 0.7.3 está instalada y `ares-launch` aceptó su apertura. Las mediciones siguientes son
+`Page.reload` por CDP en la TV real, con tiempos relativos a `performance.now()`. **No miden
+desde power-on ni acreditan un arranque físico en frío.** La prueba perceptual del usuario sigue pendiente.
+
+En la referencia anterior se cargó primero un JPEG local y, después de mostrarlo, se pidió la
+foto del día. Estas son las marcas anteriores, en milisegundos desde el inicio de esa medición:
+
+| Etapa de referencia | Marca o duración |
+| --- | ---: |
+| Solicitud del JPEG local | 717 ms |
+| Carga del JPEG local | 1.085 ms |
+| Decode del JPEG local | 1.407 ms |
+| Vidrio/frente local | 1.773 ms |
+| Foto local completamente opaca | 2.861 ms |
+| Solicitud de la foto del día | 3.177 ms |
+| Duración de esa solicitud | 20,1 ms; `cacheDisk: true` |
+| Decode de la foto del día | 3.373 ms |
+| Foto del día al frente | 3.524 ms |
+
+La foto del día de esa muestra ya estaba en la caché HTTP del navegador; también existía la
+metadata diaria. El tiempo observado incluía el orden de carga local → remota, decode, vidrio
+y fundido. Esa evidencia no demuestra que todas las fotos estén descargadas ni una falla de red.
+
+La implementación monta `Daily.mount` antes de los fondos y entrega su caché válida
+síncrona como `Backgrounds.initialList`. Restaura directamente la última foto del día validada;
+la primera carga evita la espera de `decode()` y el fundido inicial. Las rotaciones posteriores
+conservan su fundido. La primera remota tiene límite de 1.500 ms y su primer fallo vuelve de
+inmediato a la base local; sin galería diaria válida en caché, la primera local también es inmediata.
+
+Se reutilizan metadata y caché HTTP existentes, sin introducir IndexedDB ni convertir los assets.
+Se conservan créditos, licencias, renovación diaria y acompañamiento de color. No cambia Home.
+
+### Resultado con la misma foto diaria en caché
+
+La primera solicitud fue directamente la foto del día, sin JPEG local previo, con
+`fromDiskCache: true` y sin `decode()` para esa primera imagen:
+
+| Etapa 0.7.3 | Marca |
+| --- | ---: |
+| Asignación de la foto diaria | 804 ms |
+| Carga | 906 ms |
+| Foto diaria al frente | 1.255 ms |
+| Foto diaria opaca | 1.262 ms |
+
+La foto diaria pasó de estar al frente a 3.524 ms en la referencia a 1.255 ms en esta recarga.
+La capa local anterior había quedado opaca a 2.861 ms: era otra etapa, no la foto diaria final.
+No se presenta esta comparación como una reducción de 3,5 a 1,3 s desde el encendido de la TV.
+
+La siguiente foto se precargó a 2.660 ms; su `decode()` transcurrió entre 2.663 y 2.816 ms,
+quedando reservada para la rotación de cinco minutos. La primera imagen se mostró directamente
+y las rotaciones posteriores conservan su fundido.
+
+### Fallback y límites
+
+Los tests validan el límite inicial remoto de 1.500 ms, el fallback local ante errores de carga y la
+preservación de créditos y licencias. **No se verificó de forma concluyente el modo offline en
+la TV**: `Network.emulateNetworkConditions` con `offline: true` no impidió transferencias en esta sesión. Otra observación sin
+caché HTTP tuvo frente a 1.311 ms y opacidad a 1.316 ms; es una muestra, no una prueba offline.
+
+La suite completa pasó **280/280**. El IPK verificado contiene **57 archivos**, incluidos **18 del
+servicio**, y ocupa **1.690.546 bytes**. Los tests de la guardia externa pertenecen al repositorio,
+no al contenido del IPK. SHA-256:
+`7d9ef901916a6d258967be8e9d175e76ba3686926855c3d1396f4c0218a07175`.

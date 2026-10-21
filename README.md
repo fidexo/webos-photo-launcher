@@ -14,9 +14,9 @@ El dueño confirmó físicamente en 0.7.1 que Home desde YouTube termina en Mi p
 2 s, y que apagar con el control 20 s y encender vuelve a abrirla sola. Root y HBC
 quedaron persistentes y se instaló el hook de arranque de la fase 1: en un arranque en frío HBC
 ejecutó el watcher y Mi pantalla abrió en primer plano. Faltan el foco, la repetición y otros ciclos de standby.
-La versión actual **0.7.2** usa Home nativo con `general.defaultApps.home: com.frxn.mipantalla`;
+La versión actual **0.7.3** conserva el Home nativo de 0.7.2 con `general.defaultApps.home: com.frxn.mipantalla`;
 el watcher conserva boot y power/wake, sin polling de input. La prueba de HOME por entrada de red
-terminó en Mi pantalla. El dueño confirmó después Home físico desde YouTube y encendido
+terminó en Mi pantalla. En 0.7.2 el dueño confirmó después Home físico desde YouTube y encendido
 tras apagar 20 s directamente en Mi pantalla, sin Home de LG primero en esos dos casos.
 Se retiraron tres apps removibles de LG y se desactivaron cinco preferencias de promociones/Home;
 los cambios se comprobaron con lecturas posteriores. [Detalle y reversión](docs/cleaning.md).
@@ -91,8 +91,21 @@ desde YouTube terminó en nuestra app sin un nuevo `home: detected`; solo acredi
 no ausencia de Home LG ni latencia. Después, **el usuario confirmó ambos casos físicos directos**:
 Home desde YouTube y encendido tras apagar 20 s, sin LG primero en esas observaciones. Antes de
 desinstalar, restaurar el Home anterior preservando los demás defaults. [Detalle y reversión](docs/home-takeover.md).
-La suite actual del repositorio pasó **269/269**, incluidos 12 tests de la guardia externa al IPK;
+La suite posterior a 0.7.2 pasó **269/269**, incluidos 12 tests de la guardia externa al IPK;
 las 257 pruebas anteriores corresponden a la verificación original del paquete.
+
+**0.7.3 — INSTALADA:** instalación y apertura por `ares-launch` aceptadas; **280/280 pruebas**.
+IPK: **57 archivos**, **18 del servicio**, **1.690.546 bytes**. El primer fondo sale de la última foto del día
+validada en caché. Se monta primero la galería diaria y su metadata síncrona se entrega a
+`Backgrounds.initialList`, evitando cargar una foto local y reemplazarla después. La primera
+carga se muestra sin esperar `decode()` ni fundido; las rotaciones conservan su fundido normal.
+Si esa primera remota falla o tarda más de 1.500 ms, se usa enseguida la base local; sin metadata
+válida se comienza directamente por una local. Se preservan créditos, licencias, renovación diaria
+y acompañamiento de color. En `Page.reload` por CDP en la TV, la misma foto diaria en caché
+quedó al frente a **1.255 ms** y opaca a **1.262 ms**, frente a los **3.524 ms** anteriores al frente.
+Son tiempos desde `performance.now()`, no desde el encendido físico. La prueba perceptual del
+usuario sigue pendiente; el fallback de 1.500 ms está validado por tests, sin prueba offline TV concluyente.
+[Medición, paquete y límites](docs/performance.md#073-primer-fondo).
 
 ## Selección del usuario
 
@@ -270,7 +283,8 @@ root con `listApps`) está resumido en
    Developer Mode; falta confirmar sus fotos diarias y Transitions desde el dock en hardware.
 2. Inventario de apps hecho ([docs/cleaning.md](docs/cleaning.md)). Falta confirmar control remoto,
    audio y reproducción.
-3. 0.7.2 instalada, con Home nativo y watcher sin polling de input; ambos casos físicos confirmados.
+3. 0.7.3 instalada y apertura aceptada, con primer fondo optimizado; prueba perceptual pendiente.
+   Conserva Home nativo y watcher sin polling de input; los dos casos físicos confirmados son de 0.7.2.
    La navegación de 0.7 fue confirmada por el dueño.
    Root, HBC, PicCap y HyperHDR ya estaban operativos; en 0.6.0 Pantalla completa encendió
    las seis lámparas y Manual las restauró. La primera parada pidió reintentar. El arranque en
@@ -315,12 +329,11 @@ de inicio una vez integrada; no reemplaza toda la interfaz del sistema operativo
 
 ## Alcance
 
-El paquete `.ipk` 0.7.2 se generó con `@webos-tools/cli` 3.2.6 y se verificó contra `dist/` y el
-servicio WiZ: 57 archivos, incluidos 18 del servicio; 257 pruebas en la verificación original del IPK;
-1.690.292 bytes. La suite posterior del repositorio pasó 269/269, incluidos 12 tests de la guardia
-fuera del IPK; no cambia el conteo del paquete. SHA-256:
-`61a3deb0458378b0885d65df6d64390e1f8f07b1264fe722aa21add2a22303b7`. El CLI aceptó su
-instalación; el watcher registró aceptación de boot y su monitor de potencia quedó activo. La activación y
+El paquete `.ipk` 0.7.3 se generó con `@webos-tools/cli` 3.2.6 y se verificó contra `dist/` y el
+servicio WiZ: 57 archivos, incluidos 18 del servicio; 1.690.546 bytes. La suite actual pasó 280/280,
+incluidos los tests de la guardia fuera del IPK; no cambia el conteo del paquete. SHA-256:
+`7d9ef901916a6d258967be8e9d175e76ba3686926855c3d1396f4c0218a07175`. El CLI aceptó su
+instalación y `ares-launch` su apertura. La optimización no cambia Home. La activación y
 la restauración de Pantalla completa tienen confirmación física de 0.6.0; los
 controles manuales y el fondo se confirmaron en 0.5.1. El arranque en frío confirmó el hook de
 Home y la apertura de la app; el dueño confirmó que pulsar Home abre Mi pantalla. Foco,

@@ -93,6 +93,9 @@ button:disabled { cursor: default; }
   opacity: 1;
   transition: opacity var(--fade) ease-in-out;
 }
+/* La primera foto ya está lista: mostrarla sin un fundido desde negro. */
+.wallpaper-layer.is-front.is-initial,
+.frost-layer.is-front.is-initial { transition: none; }
 .aura {
   z-index: 1;
   opacity: 0;

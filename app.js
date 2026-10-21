@@ -370,6 +370,15 @@
   render(); updateClock();
   // Fondos y clima son módulos opcionales: si faltan, el inicio sigue funcionando.
   if (window.LauncherBackgrounds) {
+    // La metadata cacheada se entrega sincrónicamente: usarla en la primera carga.
+    // Las novedades de Commons llegan después y reemplazan la galería en segundo plano.
+    var initialPhotos = [];
+    if (window.LauncherDailyPhotos) {
+      window.LauncherDailyPhotos.mount(window.LAUNCHER_DAILY_PHOTOS, function (photos) {
+        if (backgrounds) backgrounds.replace(photos);
+        else initialPhotos = photos;
+      });
+    }
     backgrounds = window.LauncherBackgrounds.mount({
       stage: document.querySelector('.stage'),
       images: Array.prototype.slice.call(document.querySelectorAll('.wallpaper-layer')),
@@ -377,15 +386,12 @@
       frostHost: document.querySelector('.dock-frost'),
       credit: document.getElementById('photo-credit'),
       fallback: 'assets/wallpaper.svg',
+      initialList: initialPhotos,
       onShow: function () {
         if (sourcesOpen) renderSources();
         if (window.LAUNCHER_LIGHTS_CLIENT && window.LAUNCHER_LIGHTS_CLIENT.refreshAmbient) window.LAUNCHER_LIGHTS_CLIENT.refreshAmbient();
       }
     });
-    // Fotos del día: la galería local se ve enseguida; la de Commons la reemplaza cuando hay metadata válida.
-    if (window.LauncherDailyPhotos) {
-      window.LauncherDailyPhotos.mount(window.LAUNCHER_DAILY_PHOTOS, function (photos) { backgrounds.replace(photos); });
-    }
   }
   if (window.LauncherWeather) weather = window.LauncherWeather.mount(document.getElementById('weather'), window.LAUNCHER_WEATHER);
   // Luces WiZ: el cliente del servicio (window.LAUNCHER_LIGHTS_CLIENT) se busca al abrir el panel;

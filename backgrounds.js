@@ -11,6 +11,7 @@
   var ROTATE_MS = 5 * 60 * 1000;
   var FADE_MS = 1200;
   var LOAD_TIMEOUT_MS = 15000;
+  var INITIAL_REMOTE_TIMEOUT_MS = 1500;
   var DECODE_WAIT_MS = 2000;
   var FROST_WIDTH = 160;
   var FROST_BLUR = 3; // px de la miniatura ≈ 36 px a 1920
@@ -24,7 +25,7 @@
   function text(value) { return typeof value === 'string' ? value.trim().slice(0, 120) : ''; }
   function link(value, pattern) { return typeof value === 'string' && value.length <= 400 && pattern.test(value) ? value : ''; }
 
-  // allowRemote solo lo usa replace(): wallpapers.js sigue limitado a archivos empaquetados.
+  // allowRemote habilita metadatos del día: wallpapers.js sigue limitado a archivos empaquetados.
   function cleanList(list, allowRemote) {
     if (!Array.isArray(list)) return [];
     var seen = {};
@@ -143,8 +144,8 @@
     canvas.style.top = (area.top + (area.height - h) / 2 - box.top) + 'px';
   }
 
-  // options: layers [{image, frost}], list, fallback, onShow(entry), storage, isHidden(), now(),
-  // setTimer, clearTimer, load(image, src, done), paint(frost, image), frostEnabled(), layout().
+  // options: layers [{image, frost}], list, initialList, fallback, onShow(entry), storage,
+  // isHidden(), now(), setTimer, clearTimer, load(image, src, done, options), paint(), frostEnabled(), layout().
   // replace(list) cambia la galería sin cortar un fundido: espera a que termine la foto en curso y
   // descarta los resultados de cargas de la galería anterior (generation).
   function createSlideshow(options) {
@@ -169,6 +170,8 @@
     var pending = null; // galería nueva que espera su turno
     var replaced = false;
     var generation = 0;
+    var initialList = cleanList(options.initialList, true);
+    if (initialList.length) { list = initialList; fallback = false; replaced = true; }
 
     function useFallback() {
       fallback = true;
@@ -241,15 +244,18 @@
         if (ok && options.frostEnabled()) layer.frostReady = options.paint(layer.frost, layer.image);
         else layer.frostReady = false;
         done(ok);
-      });
+      }, { immediate: front === -1 });
     }
 
     function swap(index) {
       var incoming = front === 0 ? 1 : 0;
+      var initial = front === -1;
       layers.forEach(function (layer, position) {
         var on = position === incoming;
         layer.image.classList.toggle('is-front', on);
         layer.frost.classList.toggle('is-front', on && layer.frostReady);
+        layer.image.classList.toggle('is-initial', initial && on);
+        layer.frost.classList.toggle('is-initial', initial && on);
       });
       front = incoming;
       current = index;
@@ -292,6 +298,7 @@
         if (ok) { swap(index); return; }
         if (fallback) { schedulePreload(); return; } // ni el SVG cargó: queda el color (o llega una galería nueva)
         list[index].failed = true;
+        if (front === -1 && replaced) { restoreBase(); return; }
         show(nextIndex(list, index));
       });
     }
@@ -308,6 +315,12 @@
       start: function () {
         var last = null;
         if (options.storage) { try { last = options.storage.getItem(STORAGE_KEY); } catch (error) { last = null; } }
+        if (initialList.length) {
+          var index = 0;
+          for (var i = 0; i < list.length; i += 1) if (list[i].src === last) index = i;
+          show(index);
+          return;
+        }
         show(fallback ? 0 : startIndex(list, last));
       },
       visibilityChanged: function () {
@@ -340,9 +353,11 @@
     };
   }
 
-  function loadImage(image, src, done) {
+  function loadImage(image, src, done, options) {
     var finished = false;
-    var guard = setTimeout(function () { finish(false); }, LOAD_TIMEOUT_MS);
+    var immediate = !!options && options.immediate === true;
+    var timeout = immediate && REMOTE_SRC.test(src) ? INITIAL_REMOTE_TIMEOUT_MS : LOAD_TIMEOUT_MS;
+    var guard = setTimeout(function () { finish(false); }, timeout);
     function finish(ok) {
       if (finished) return;
       finished = true;
@@ -356,7 +371,7 @@
       // La foto ya cargó: eso decide. decode() solo evita el tirón al empezar el fundido
       // (Chromium 64+), pero puede no resolverse nunca con JPEG grandes: se espera como máximo 2 s.
       clearTimeout(guard);
-      if (typeof image.decode !== 'function') { finish(true); return; }
+      if (immediate || typeof image.decode !== 'function') { finish(true); return; }
       guard = setTimeout(function () { finish(true); }, DECODE_WAIT_MS);
       image.decode().then(function () { finish(true); }, function () { finish(true); });
     }
@@ -380,6 +395,7 @@
     var slideshow = createSlideshow({
       layers: layers,
       list: window.LAUNCHER_WALLPAPERS,
+      initialList: options.initialList,
       fallback: options.fallback,
       storage: storage,
       isHidden: function () { return document.hidden === true; },
