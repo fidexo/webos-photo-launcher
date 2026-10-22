@@ -1,0 +1,1 @@
+# webos-photo-launcher
