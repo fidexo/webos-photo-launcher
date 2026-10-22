@@ -15,7 +15,7 @@ dependencias) y se maneja con el control remoto o con el Magic Remote.
 
 ### Qué hace
 - **Fotos de viaje:** 50 destinos de Wikimedia Commons (ciudades de EE. UU. y Europa, Asia, Sudamérica y maravillas
-  naturales). Orden aleatorio sin repetir, cambio cada 12 s con fundido, nombre del lugar y crédito con licencia.
+  naturales). Orden aleatorio sin repetir, cambio cada 12 s con fundido y el nombre del lugar al pie; autor, licencia y origen de cada foto están en Personalizar → Fuentes.
   Funciona sin conexión con 4 fotos incluidas. El botón **rojo** del control descarta un destino.
 - **Fila de apps** (Netflix, HBO Max, Prime Video, Movistar TV, YouTube, Disney+, Apple TV, Spotify) con scroll
   horizontal que mantiene visible la tarjeta enfocada, y un acceso al inicio original de LG.
@@ -30,14 +30,17 @@ dependencias) y se maneja con el control remoto o con el Magic Remote.
 - Probado **solo** en: LG LM6350PSB, firmware 05.40.97, webOS 4.x, Node 0.12.2. En otros modelos puede no funcionar.
 - No instala ni cambia el root. Los scripts de la TV asumen `ssh` como root con clave y `scp`.
 
+### Paquete listo para instalar
+`releases/` trae el `.ipk` ya armado (sin íconos de marcas ni tu clima: al instalar con `scripts/tv-install.sh` se copian los íconos desde tu TV).
+El clima aparece como "no disponible" hasta que armes tu propio paquete con `weather-config.js`.
+
 ### Uso rápido
 ```bash
 npm test                    # Node 18+; 408 tests (1 omitido)
 npm run build               # genera dist/
 python scripts/make_ipk.py  # genera artifacts/<id>_<versión>_all.ipk
 export TV_HOST=192.168.1.50 TV_KEY=~/.ssh/mi_clave     # IP de la TV y clave SSH de root
-sh scripts/fetch-tv-icons.sh  # copia desde tu TV los íconos oficiales de las apps (antes del build)
-sh scripts/tv-install.sh artifacts/com.fidexo.photolauncher_1.9.0_all.ipk
+sh scripts/tv-install.sh artifacts/com.fidexo.photolauncher_1.12.0_all.ipk
 sh scripts/tv-home.sh status | mipantalla | lg          # a qué app llama el botón Home
 sh scripts/tv-privacy.sh status | apply | remove        # bloqueo de dominios (opcional)
 ```
@@ -45,9 +48,9 @@ Para **volver atrás**: `tv-install.sh` con un `.ipk` anterior (bajar de versió
 y `tv-privacy.sh remove`. Copiá `weather-config.example.js` a `weather-config.js` y poné tu ciudad.
 
 ### Íconos oficiales
-Los íconos de Netflix, YouTube, etc. **no están en este repositorio** (son marcas de sus dueños). `scripts/fetch-tv-icons.sh` los copia
-desde tu propia TV (cada app trae el suyo) a `assets/logos/tv/`, y el build los incluye en tu paquete. Sin ellos, cada app se muestra
-como una tarjeta de color con su nombre. **No publiques el `.ipk` ya armado**, porque contiene esos íconos.
+Los íconos de Netflix, YouTube, etc. **no están en este repositorio ni en el paquete** (son marcas de sus dueños). Al instalar,
+`scripts/tv-install.sh` los copia automáticamente desde tu propia TV (cada app trae el suyo) a la app instalada. Si instalás el `.ipk`
+por otro medio, cada app se muestra como una tarjeta de color con su nombre.
 
 ### Personalizar
 - Apps: `config.js` (IDs de apps verificados en la TV con `tv-scripts/query-user-apps.sh`).
@@ -81,8 +84,7 @@ remote or the Magic Remote.
 > written for a different model (webOS 5.6). The original docs live in `docs/upstream/` and **do not describe this TV**.
 
 ### Features
-- **Travel photos:** 50 Wikimedia Commons destinations, shuffled without repeats, 12 s fade rotation, place name and
-  licence credit; 4 bundled offline photos; the **red** remote key discards a destination.
+- **Travel photos:** 50 Wikimedia Commons destinations, shuffled without repeats, 12 s fade rotation, place name on screen (author, licence and origin in Customize → Sources); 4 bundled offline photos; the **red** remote key discards a destination.
 - **App row** with horizontal scrolling that keeps the focused card visible, plus a shortcut to LG's original home.
 - **Photo-only mode** after 45 s idle; any key or pointer movement brings the UI back.
 - **Customize** (hide/reorder apps), **weather** (Open-Meteo), **auto-start** on power-on, and an optional **Home button**
@@ -94,12 +96,15 @@ remote or the Magic Remote.
 - Tested **only** on LG LM6350PSB, firmware 05.40.97, webOS 4.x, Node 0.12.2. Other models may not work.
 - Nothing here roots your TV. Scripts need key-based root `ssh`/`scp`.
 
+### Ready-made package
+`releases/` has the built `.ipk` (no brand icons and no weather location: `scripts/tv-install.sh` copies the icons from your TV when installing).
+Weather shows as unavailable until you build your own package with a `weather-config.js`.
+
 ### Quick start
 ```bash
 npm test && npm run build && python scripts/make_ipk.py
 export TV_HOST=192.168.1.50 TV_KEY=~/.ssh/my_key
-sh scripts/fetch-tv-icons.sh   # official app icons, copied from your own TV (before the build)
-sh scripts/tv-install.sh artifacts/com.fidexo.photolauncher_1.9.0_all.ipk
+sh scripts/tv-install.sh artifacts/com.fidexo.photolauncher_1.12.0_all.ipk
 sh scripts/tv-home.sh status | mipantalla | lg
 sh scripts/tv-privacy.sh status | apply | remove
 ```
@@ -107,9 +112,8 @@ To roll back: reinstall an older `.ipk` (downgrades are untested), `tv-home.sh l
 Copy `weather-config.example.js` to `weather-config.js` with your city.
 
 ### Official icons
-App icons (Netflix, YouTube, …) are **not in this repo** (trademarks). `scripts/fetch-tv-icons.sh` copies them from your own TV to
-`assets/logos/tv/` and the build bundles them into your package; without them each app is a coloured card with its name.
-**Do not publish the built `.ipk`**, it contains those icons.
+App icons (Netflix, YouTube, …) are **not in this repo or the package** (trademarks). `scripts/tv-install.sh` copies them automatically
+from your own TV into the installed app; if you install the `.ipk` some other way, each app is a coloured card with its name.
 
 ### Known limits
 Only verified on one TV. Performance was judged by feel, not benchmarks. Domain blocking has no measured benefit.

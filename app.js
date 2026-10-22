@@ -258,7 +258,7 @@
     var glass = element('span', 'tile-glass');
     glass.appendChild(element('span', 'tile-tint'));
     var icon = logo(item, 'tile-logo');
-    // Ícono ausente (repo recién clonado sin fetch-tv-icons.sh): tarjeta de color con el nombre de la app.
+    // Ícono ausente (tv-install.sh lo copia de la TV al instalar): tarjeta de color con el nombre de la app.
     icon.addEventListener('error', function () {
       if (icon.parentNode !== glass) return;
       tile.classList.add('is-generic');

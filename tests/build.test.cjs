@@ -102,7 +102,7 @@ test('every asset referenced by the app exists locally', () => {
   assert.ok(references.length >= 8, 'fallback wallpaper and seven marks are referenced');
   for (const reference of references) {
     assert.match(reference, /\.(?:svg|jpe?g|webp|png)$/);
-    if (reference.startsWith('assets/logos/tv/')) continue; // íconos de la TV: los trae scripts/fetch-tv-icons.sh, no están en el repo
+    if (reference.startsWith('assets/logos/tv/')) continue; // íconos de la TV: los copia scripts/tv-install.sh desde la TV, no están en el repo
     assert.equal(fs.statSync(path.join(root, reference)).isFile(), true, reference);
   }
   const config = fs.readFileSync(path.join(root, 'config.js'), 'utf8');
@@ -139,4 +139,17 @@ test('Transitions opens YouTube only from the tile click, never on focus or load
   assert.match(app, /tile\.addEventListener\('click', function \(\) \{ openItem\(item\); \}\)/);
   const focusCode = app.slice(app.indexOf('function showFocus'), app.indexOf('// ---------- Inicio'));
   assert.doesNotMatch(focusCode, /openItem|openTransitions|transitions\.|bridge\./);
+});
+
+test('the icon copier run by tv-install.sh covers exactly the apps whose icon config.js expects under assets/logos/tv', () => {
+  const sandbox = { window: {} };
+  require('node:vm').runInNewContext(fs.readFileSync(path.join(root, 'config.js'), 'utf8'), sandbox);
+  const expected = sandbox.window.LAUNCHER_CONFIG.filter((item) => /^assets\/logos\/tv\//.test(item.logo))
+    .map((item) => item.key + ' ' + item.appId).sort();
+  const script = fs.readFileSync(path.join(root, 'scripts', 'tv', 'install-icons.sh'), 'utf8');
+  const map = /MAP='([^']*)'/.exec(script)[1].split('\n').map((line) => line.trim()).filter(Boolean).sort();
+  assert.deepEqual(map, Array.from(expected));
+  for (const item of sandbox.window.LAUNCHER_CONFIG.filter((entry) => /^assets\/logos\/tv\//.test(entry.logo))) {
+    assert.equal(item.logo, 'assets/logos/tv/' + item.key + '.png', 'the copier writes <key>.png');
+  }
 });

@@ -576,7 +576,8 @@ test('a stale load timeout does not clear the handlers of a newer load on the sa
 
 test('credits and sources lead with the place name when there is one', () => {
   const entry = { src: 'assets/wallpapers/a.jpg', author: 'Ana', source: 'https://commons.wikimedia.org/wiki/File:A.jpg', place: 'Oia, Santorini, Grecia' };
-  assert.equal(B.creditText(entry), 'Oia, Santorini, Grecia · Foto: Ana · commons.wikimedia.org');
+  assert.equal(B.creditText(entry), 'Oia, Santorini, Grecia', 'on screen only the place');
+  assert.equal(B.creditText(Object.assign({}, entry, { provider: 'Wikimedia Commons', license: 'CC BY-SA 4.0' })), 'Oia, Santorini, Grecia');
   assert.deepEqual(Array.from(B.sourceDetails(entry)[0]), ['Lugar', 'Oia, Santorini, Grecia']);
   assert.equal(B.cleanList([entry])[0].place, 'Oia, Santorini, Grecia');
 });

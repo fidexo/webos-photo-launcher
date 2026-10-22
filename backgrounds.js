@@ -56,7 +56,9 @@
 
   function creditText(entry) {
     if (!entry) return '';
-    var place = entry.place ? entry.place + ' · ' : '';
+    // En pantalla solo el lugar; autor, licencia y origen siguen en el panel Fuentes (sourceDetails).
+    if (entry.place) return entry.place;
+    var place = '';
     if (entry.provider) return place + 'Foto: ' + [entry.author, entry.provider, entry.license].filter(Boolean).join(' · ');
     var source = entry.source;
     var host = /^https?:\/\/([^\/?#]+)/i.exec(source);

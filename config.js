@@ -1,5 +1,5 @@
-// IDs confirmados por inventario de solo lectura en la LG LM6350PSB. Los íconos de cada app se leen de la propia
-// TV con scripts/fetch-tv-icons.sh (assets/logos/tv/, fuera del repositorio): son los oficiales de cada app.
+// IDs confirmados por inventario de solo lectura en la LG LM6350PSB. Los íconos de cada app los copia
+// scripts/tv-install.sh desde la propia TV a assets/logos/tv/ de la app instalada (no están en el repo ni en el paquete).
 window.LAUNCHER_CONFIG = [
   { key: 'netflix', title: 'Netflix', appId: 'netflix', logo: 'assets/logos/tv/netflix.png', color: '#e50914', tagline: 'Series y películas', kind: 'app' },
   { key: 'max', title: 'HBO Max', appId: 'com.wbd.stream', logo: 'assets/logos/tv/max.png', color: '#6f54ff', tagline: 'HBO, series y películas', kind: 'app' },

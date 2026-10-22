@@ -31,3 +31,5 @@ echo \"version en la TV: \$GOT (esperada $VERSION)\"
 [ \"\$BEFORE\" = \"\$AFTER\" ] && echo 'hooks y autostart: sin cambios' || echo 'AVISO: cambiaron hooks/autostart'
 [ \"\$GOT\" = $VERSION ]
 "
+# Íconos oficiales de las apps: se copian desde la propia TV a la app recién instalada.
+{ echo "APP=/media/developer/apps/usr/palm/applications/$ID"; cat "$(dirname "$0")/tv/install-icons.sh"; } | $SSH 'sh -s'

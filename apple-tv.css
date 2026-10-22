@@ -286,11 +286,16 @@ html:not(.force-fallback) .weather {
   background: linear-gradient(145deg, #a50034, #5e0020);
 }
 
-/* Solo fondo: se ocultan reloj, clima, dock y créditos; la foto sigue rotando. */
+/* Solo fondo: se ocultan reloj, clima y dock; la foto sigue rotando y queda visible dónde es (lugar y crédito). */
 .is-clean .topbar,
-.is-clean .home,
-.is-clean .footer {
+.is-clean .home {
   visibility: hidden;
+}
+
+.is-clean .photo-credit {
+  color: #fff;
+  font-size: 1.5rem;
+  text-shadow: 0 .1rem .8rem rgba(0,0,0,.8);
 }
 
 /* V2: wordmarks vectoriales, superficies de marca y proporciones más cercanas a tvOS. */
@@ -308,7 +313,7 @@ html:not(.force-fallback) .weather {
   pointer-events: none;
 }
 
-/* Íconos oficiales de cada app, leídos de la propia TV (scripts/fetch-tv-icons.sh): cuadrado completo, centrado
+/* Íconos oficiales de cada app, que tv-install.sh copia de la propia TV: cuadrado completo, centrado
    sobre el mismo color de fondo que trae cada ícono, así la tarjeta ancha queda sin costuras. */
 .tile[data-id="netflix"] { background: #fff; }
 .tile[data-id="max"] { background: #00030c; }
