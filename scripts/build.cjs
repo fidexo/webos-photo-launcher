@@ -14,7 +14,7 @@ function regularFile(file) {
   const stat = fs.lstatSync(file);
   if (stat.isSymbolicLink() || !stat.isFile()) throw Error('Debe ser un archivo regular, no un enlace: ' + path.relative(root, file));
 }
-for (const file of ['index.html', 'styles.css', 'config.js', 'bridge.js', 'weather.js', 'backgrounds.js', 'daily-photos.js', 'transitions.js', 'ambient-wallpaper.js', 'lights-client.js', 'lights-panel.js', 'lights-panel.css', 'app.js', 'appinfo.json', 'icon.png', 'LICENSE']) {
+for (const file of ['index.html', 'styles.css', 'apple-tv.css', 'config.js', 'bridge.js', 'weather.js', 'backgrounds.js', 'daily-photos.js', 'app.js', 'appinfo.json', 'icon.png', 'LICENSE']) {
   regularFile(path.join(root, file));
   fs.copyFileSync(path.join(root, file), path.join(output, file));
 }
@@ -22,7 +22,7 @@ for (const file of ['index.html', 'styles.css', 'config.js', 'bridge.js', 'weath
 // Si falta, se quita su <script>: wallpaper SVG, "Clima no disponible", solo fotos locales o
 // Transitions explica que no hay episodios configurados.
 const optional = {};
-for (const file of ['wallpapers.js', 'weather-config.js', 'daily-photos-config.js', 'transitions-config.js', 'lights-config.js']) {
+for (const file of ['wallpapers.js', 'weather-config.js', 'daily-photos-config.js']) {
   const from = path.join(root, file);
   optional[file] = fs.existsSync(from);
   if (!optional[file]) continue;
@@ -35,7 +35,7 @@ for (const file of ['webOSTV.js', 'LICENSE-2.0.txt', 'SOURCE.md']) {
 }
 // Recursos locales: SVG en todo assets/; además fotos (JPEG/WebP/PNG) y textos de licencia
 // o créditos dentro de assets/wallpapers/. Solo archivos regulares, sin enlaces.
-const IMAGE = /\.svg$/i;
+const IMAGE = /\.(?:svg|png)$/i;
 const PHOTO = /\.(?:jpe?g|webp|png)$/i;
 const NOTICE = /\.(?:txt|md)$/i;
 function copyAssets(source, target, inWallpapers) {

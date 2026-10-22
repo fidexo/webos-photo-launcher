@@ -258,10 +258,7 @@
       iconName = view.condition.icon;
       temp.textContent = degrees(view.reading.temperature);
       condition.textContent = view.condition.label;
-      meta.textContent = [
-        view.reading.apparent === null ? '' : 'ST ' + degrees(view.reading.apparent),
-        view.state === 'stale' ? 'Último dato ' + clock(view.validAt) : view.place + ' · ' + clock(view.validAt)
-      ].filter(Boolean).join(' · ');
+      meta.textContent = view.state === 'stale' ? view.place + ' · dato anterior' : view.place;
       root.setAttribute('aria-label', 'Clima en ' + view.place + ': ' + view.condition.label + ', ' +
         Math.round(view.reading.temperature) + ' grados' +
         (view.reading.apparent === null ? '' : ', sensación térmica ' + Math.round(view.reading.apparent)) +

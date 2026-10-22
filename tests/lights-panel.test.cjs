@@ -594,8 +594,6 @@ test('index.html: discreet Luces button next to Personalizar, panel closed, dock
   assert.match(actions, /<button id="lights-button"[^>]*\bhidden>/);
   assert.ok(actions.indexOf('id="lights-button"') < actions.indexOf('id="edit-button"'));
   assert.match(html, /<section id="lights-panel"[^>]*role="dialog"[^>]*aria-modal="true"[^>]*hidden>/);
-  assert.ok(html.indexOf('lights-panel.js') < html.indexOf('<script src="app.js">'));
-  assert.match(html, /<link rel="stylesheet" href="lights-panel.css">/);
   assert.equal(fs.statSync(path.join(root, 'assets/logos/lights.svg')).isFile(), true);
   const dock = html.slice(html.indexOf('<section class="dock'), html.indexOf('</main>'));
   assert.doesNotMatch(dock, /lights/);

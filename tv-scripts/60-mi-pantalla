@@ -1,0 +1,4 @@
+#!/bin/sh
+MIPANTALLA_HOME_NATIVE=1
+export MIPANTALLA_HOME_NATIVE
+exec /var/lib/mipantalla-autostart/home-autostart.sh

@@ -402,7 +402,7 @@ button:disabled { cursor: default; }
 }
 #status { color: var(--text); font-size: 1.1rem; font-weight: 500; text-shadow: 0 1px .6rem rgba(0, 0, 0, .5); }
 #status:empty { display: none; }
-#status:not(:empty) + .photo-credit { display: none; }
+#status.alert + .photo-credit { display: none; } /* el mensaje de foco no desplaza al crédito */
 .photo-credit { color: var(--text-3); font-size: 1rem; text-shadow: 0 1px .5rem rgba(0, 0, 0, .5); }
 .navigation-hint { display: flex; flex: none; align-items: center; color: var(--text); font-size: 1.1rem; text-shadow: 0 1px .6rem rgba(0, 0, 0, .6); }
 .hint { display: flex; align-items: center; margin-left: 2.25rem; }

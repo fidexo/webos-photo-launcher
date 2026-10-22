@@ -1,144 +1,108 @@
-# Mi pantalla
+# webos-photo-launcher — "Mi pantalla"
 
-Un inicio personalizado para LG webOS: tus apps, fotos y el control del living en una pantalla
-Liquid Glass que se maneja con el control remoto.
+**ES · EN** — [Español](#español) · [English](#english)
 
-**0.7.5 instalada en la TV de referencia.** Incorpora un acceso a Homebrew Channel y un auditor
-de privacidad y recursos de sólo lectura. Los ocho accesos entran a 1080p y 720p. El acceso
-abrió Homebrew Channel en la TV; no instala paquetes ni obtiene root por sí mismo.
+---
 
-[**Tutorial completo**](docs/tutorial.md) · [Privacidad y limpieza](docs/privacy-cleanup.md) ·
-[Funciones futuras](docs/product-vision.md) · [Instalador desde el navegador](docs/browser-installer.md)
-· [Próximos pasos: rendimiento, referencias visuales, Flutter y wizard local](docs/next-steps.md)
+## Español
 
-## Qué ofrece hoy
+Un inicio personalizado para **LG webOS 4** (probado en una LG LM6350PSB): reloj, clima, tus apps de streaming
+y de fondo una rotación de fotos de destinos de viaje. Está pensado para TVs viejas (HTML/CSS/JS ES5, sin
+dependencias) y se maneja con el control remoto o con el Magic Remote.
 
-- Íconos sin títulos, ordenables y ocultables: YouTube, Spotify, Nuvio, Netflix, Disney+,
-  Transitions/Bedrock, Homebrew Channel y HDMI 1. Los IDs se verifican por modelo: un acceso
-  configurado no significa que la app esté instalada. Nuvio no apareció en el último inventario.
-- Ilustración local desde el primer pintado, foto con fundido y una selección diaria de
-  Wikimedia Commons con créditos y licencia. Las fotos incluidas funcionan sin esa descarga.
-- Clima de la ciudad configurada con Open-Meteo, caché local y estados de dato viejo o sin red.
-- Un episodio aleatorio de John Digweed Transitions en YouTube. Puede aparecer primero el
-  selector de perfiles de YouTube; ese paso pertenece a esa app.
-- Luces WiZ por red local: selección del living, encendido, brillo, color, blancos y
-  acompañamiento del fondo de Mi pantalla.
-- Home nativo y apertura al encender mediante configuración root separada, con respaldo,
-  watcher de potencia y una guardia externa de recuperación.
+> Es una versión **modificada** del proyecto [frxnnk/webos-liquid-glass-launcher](https://github.com/frxnnk/webos-liquid-glass-launcher),
+> que fue pensado para otro modelo (webOS 5.6). Los documentos originales están en `docs/upstream/` y **no describen esta TV**.
 
-Mi pantalla es una app, no un firmware. No reemplaza Ajustes ni las interfaces internas de
-las apps. El Home original sigue instalado como opción de recuperación.
+### Qué hace
+- **Fotos de viaje:** 50 destinos de Wikimedia Commons (ciudades de EE. UU. y Europa, Asia, Sudamérica y maravillas
+  naturales). Orden aleatorio sin repetir, cambio cada 12 s con fundido, nombre del lugar y crédito con licencia.
+  Funciona sin conexión con 4 fotos incluidas. El botón **rojo** del control descarta un destino.
+- **Fila de apps** (Netflix, HBO Max, Prime Video, Movistar TV, YouTube, Disney+, Apple TV, Spotify) con scroll
+  horizontal que mantiene visible la tarjeta enfocada, y un acceso al inicio original de LG.
+- **Solo fondo:** tras 45 s sin actividad queda la foto a pantalla completa; una tecla o mover el puntero vuelve.
+- **Personalizar:** ocultar y ordenar apps. **Clima** de tu ciudad (Open-Meteo), en Celsius.
+- **Inicio automático** al encender la TV y **botón Home** que abre Mi pantalla (opcional, reversible).
+- **Bloqueo opcional** de dominios de publicidad/ACR de LG (opcional, reversible).
 
-## Compatibilidad y evidencia
+### Requisitos y advertencias
+- Una TV LG **con root** (por ejemplo con DejaVuln) y [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel) + SSH.
+  **Hacer root y modificar una TV tiene riesgos. Hacelo bajo tu responsabilidad.** Este proyecto no está afiliado a LG.
+- Probado **solo** en: LG LM6350PSB, firmware 05.40.97, webOS 4.x, Node 0.12.2. En otros modelos puede no funcionar.
+- No instala ni cambia el root. Los scripts de la TV asumen `ssh` como root con clave y `scp`.
 
-La unidad de referencia es **LG 49UN7310PSC**, webOS **5.6.2-21**, firmware **04.64.00**,
-Chromium **68**. El frontend conserva ES5 y no necesita un servidor en la computadora después
-de instalarlo. La app y el control manual WiZ pueden usarse con Developer Mode; Home nativo y
-captura de otras apps requieren root y configuración adicional.
-
-- El dueño probó **0.7.4** y confirmó que anda bastante bien.
-- En **0.7.2**, confirmó Home desde YouTube y encendido tras apagar 20 segundos directamente
-  en Mi pantalla. No se extiende a todos los modelos ni ciclos de standby.
-- La **0.7.5** se verificó en Brave a 1920×1080 y 1280×720 y se instaló en la TV. Se comprobó
-  Homebrew en primer plano después de abrirlo desde el nuevo acceso.
-- La muestra de navegación rápida 0.7.5 registró aproximadamente **59,7 FPS** por CDP.
-  No es un tiempo desde el encendido ni una garantía de FPS para todos los escenarios.
-- Pantalla completa tuvo activación/restauración física en una etapa anterior con PicCap e
-  HyperHDR. El inventario actual no muestra sus apps: hay que comprobar de nuevo instalación,
-  servicios y configuración. HDMI y contenido protegido siguen pendientes.
-
-[Mediciones y método](docs/performance.md) · [Home y reversión](docs/home-takeover.md) ·
-[Luces y sus límites](docs/lights.md) · [Captura](docs/screen-sync.md)
-
-## Instalar
-
-**Piloto para una TV ya rooteada:** `npm run setup` (`npm.cmd run setup` en PowerShell) inicia un
-asistente local para Brave, limitado al modelo y firmware de referencia. Permite revisar un
-plan y aplicar instalación, Home, privacidad o tres bajas LG opcionales, con respaldo y
-restauración acotada. Requiere SSH root y huella ya verificados; **no obtiene root desde cero**.
-[Requisitos, paquete público, recuperación y pruebas pendientes](docs/local-installer.md).
-
-El piloto pasó **401 pruebas**. En Brave contra la TV se verificaron conexión/plan y aplicación
-idempotente de privacidad, con respaldo real. Tras recargar se recuperó ese respaldo y se
-restauró; otra lectura SSH confirmó el snapshot completo igual al inicial. Home, instalación
-y bajas no se aplicaron con este piloto; root desde cero y arranque físico siguen pendientes.
-
-El [tutorial](docs/tutorial.md) incluye Developer Mode, emparejamiento, configuración, paquetes,
-Home manual, recuperación y desinstalación. Para la parte local:
-
-```sh
-git clone https://github.com/frxnnk/webos-liquid-glass-launcher.git
-cd webos-liquid-glass-launcher
-npm test
-npm run build
-npm exec --yes --package=@webos-tools/cli@3.2.6 -- ares-package dist services/com.frxn.mipantalla.lights -o artifacts --no-minify
-python scripts/verify_package.py
+### Uso rápido
+```bash
+npm test                    # Node 18+; 408 tests (1 omitido)
+npm run build               # genera dist/
+python scripts/make_ipk.py  # genera artifacts/<id>_<versión>_all.ipk
+export TV_HOST=192.168.1.50 TV_KEY=~/.ssh/mi_clave     # IP de la TV y clave SSH de root
+sh scripts/tv-install.sh artifacts/com.fidexo.photolauncher_1.8.0_all.ipk
+sh scripts/tv-home.sh status | mipantalla | lg          # a qué app llama el botón Home
+sh scripts/tv-privacy.sh status | apply | remove        # bloqueo de dominios (opcional)
 ```
+Para **volver atrás**: `tv-install.sh` con un `.ipk` anterior (bajar de versión no está probado), `tv-home.sh lg`
+y `tv-privacy.sh remove`. Copiá `weather-config.example.js` a `weather-config.js` y poné tu ciudad.
 
-No instalar si falla la verificación. El tutorial explica la conexión `mi-tv` y el comando
-`ares-install`. En PowerShell usar `npm.cmd` si la política bloquea `npm.ps1`.
+### Personalizar
+- Apps: `config.js` (IDs de apps verificados en la TV con `tv-scripts/query-user-apps.sh`).
+- Fotos: `daily-photos-config.js` (hasta 50 `pageids` de Commons, con el nombre del lugar) y `wallpapers.js`.
+- Tiempos: `ROTATE_MS` en `backgrounds.js` y `IDLE_MS` en `app.js`.
+- El ID del paquete es `com.fidexo.photolauncher`; cambialo en `appinfo.json` (y en `config`/scripts) si querés el tuyo.
 
-Las configuraciones del hogar no se publican: `weather-config.js`, `lights-config.js` y el
-`screen-config.json` del servicio están excluidos de Git. Los ejemplos son una guía; no copiar
-tokens, direcciones de lámparas ni atestaciones de hardware de otra TV. Antes de actualizar una
-instalación root existente, respaldar y preservar su configuración y permisos específicos.
+### Carpetas
+`app.js`, `backgrounds.js`, `daily-photos.js`, `apple-tv.css`… (la app) · `services/` (inicio automático, Node 0.12) ·
+`scripts/` (build, empaquetado e instalación) · `tv-scripts/` (debloat y autostart, específicos de esta TV) ·
+`tests/` · `docs/upstream/` (documentación del proyecto original).
 
-## Privacidad y limpieza
+### Limitaciones conocidas
+Lo probado es lo de esta TV; no se midió el rendimiento más allá de "se siente fluido". El bloqueo de dominios no
+tiene un efecto medido. Las apps preinstaladas cifradas (p. ej. Claro Video) no se pueden desinstalar en este firmware.
+Ver [NOTICE.md](NOTICE.md) para créditos y licencias.
 
-En la TV se volvieron a leer apagadas las preferencias de promociones, Live Plus, anuncios
-personalizados, anuncios del salvapantallas y cookies publicitarias. Se mantienen ausentes
-LG Streaming Week, LG Sports Playbook y LG Channels. No se apagaron a ciegas servicios del
-sistema ni se purgaron logs. [Acciones y reversión](docs/cleaning.md).
+### Autoría
+Desarrollado con **Codex** (OpenAI), que hizo la primera adaptación a esta TV (root, debloat, inicio automático y el primer diseño),
+y **Claude** (Anthropic), que continuó el trabajo (dock, fotos, Home, pruebas y publicación), sobre el proyecto base de **frxnnk**.
 
-También se retiraron Apple Music, Apple TV, DGO y Star+ por selección del dueño, conservando
-las seis apps que indicó y las herramientas principales: el inventario quedó en 117 apps.
-Los permisos `analyticsLog` y `crashLog` de LG quedaron en `false`, con respaldo y lectura
-posterior. Hay un hook de reaplicación probado manualmente; el arranque físico posterior
-está pendiente. [Helper, procedimiento, límites y reversión](docs/diagnostic-privacy.md).
+---
 
-Auditamos **Life’s Good Without Spying**, la app del catálogo Homebrew. Su versión revisada
-aplica el conjunto de opciones al cambiar un toggle; los defaults incluyen voz y purga.
-No se habilitó. [Código revisado, riesgos concretos y perfil propuesto](docs/privacy-cleanup.md).
+## English
 
-También publicamos un auditor de sólo lectura para una TV con SSH root ya autorizado:
+A custom home screen for **LG webOS 4** (tested on an LG LM6350PSB): clock, weather, your streaming apps and a rotating
+background of travel-destination photos. Built for old TVs (plain ES5 HTML/CSS/JS, no dependencies), controlled with the
+remote or the Magic Remote.
 
-```sh
-node scripts/privacy-audit.cjs --help
-node scripts/privacy-audit.cjs --host IP_DE_TU_TV --identity RUTA_A_TU_CLAVE
+> This is a **modified** fork of [frxnnk/webos-liquid-glass-launcher](https://github.com/frxnnk/webos-liquid-glass-launcher),
+> written for a different model (webOS 5.6). The original docs live in `docs/upstream/` and **do not describe this TV**.
+
+### Features
+- **Travel photos:** 50 Wikimedia Commons destinations, shuffled without repeats, 12 s fade rotation, place name and
+  licence credit; 4 bundled offline photos; the **red** remote key discards a destination.
+- **App row** with horizontal scrolling that keeps the focused card visible, plus a shortcut to LG's original home.
+- **Photo-only mode** after 45 s idle; any key or pointer movement brings the UI back.
+- **Customize** (hide/reorder apps), **weather** (Open-Meteo), **auto-start** on power-on, and an optional **Home button**
+  that opens this launcher. Optional, reversible **LG ad/ACR domain blocking**.
+
+### Requirements and warnings
+- A **rooted** LG TV (e.g. DejaVuln) with [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel) and SSH.
+  **Rooting and modifying a TV is risky; do it at your own risk.** Not affiliated with LG.
+- Tested **only** on LG LM6350PSB, firmware 05.40.97, webOS 4.x, Node 0.12.2. Other models may not work.
+- Nothing here roots your TV. Scripts need key-based root `ssh`/`scp`.
+
+### Quick start
+```bash
+npm test && npm run build && python scripts/make_ipk.py
+export TV_HOST=192.168.1.50 TV_KEY=~/.ssh/my_key
+sh scripts/tv-install.sh artifacts/com.fidexo.photolauncher_1.8.0_all.ipk
+sh scripts/tv-home.sh status | mipantalla | lg
+sh scripts/tv-privacy.sh status | apply | remove
 ```
+To roll back: reinstall an older `.ipk` (downgrades are untested), `tv-home.sh lg`, `tv-privacy.sh remove`.
+Copy `weather-config.example.js` to `weather-config.js` with your city.
 
-No obtiene root, instala apps, cambia ajustes ni descubre equipos. Informa preferencias
-conocidas, inventario resumido, Home, memoria, disco y una muestra breve de CPU. Exige verificar
-el host SSH y no lee la clave; el JSON opcional se crea sólo con `--output`. Mantener los
-informes y respaldos privados. El script se probó sobre la TV real.
+### Known limits
+Only verified on one TV. Performance was judged by feel, not benchmarks. Domain blocking has no measured benefit.
+Encrypted preinstalled apps cannot be uninstalled on this firmware. See [NOTICE.md](NOTICE.md) for credits and licences.
 
-**Apagar anuncios no demuestra cero telemetría.** LG y las apps de streaming conservan sus
-propias conexiones y acuerdos. Nuestra UI consulta Commons y Open-Meteo cuando se configuran
-esas funciones; WiZ usa la LAN. Se describe cada límite en la guía de privacidad.
-
-## Hacia dónde seguir
-
-Priorizamos un dock con inventario y recientes locales, un panel de estado/privacidad con
-recuperación y escenas WiZ con confirmación y deshacer. Son propuestas con requisitos y
-criterios de aceptación, no funciones anunciadas como terminadas.
-[Visión del producto](docs/product-vision.md) · [Roadmap](docs/roadmap.md).
-
-El piloto local ya tiene interfaz en el browser y motor con plan, respaldo, aplicación y
-restauración. Requiere root existente y admite un único perfil; no es un root universal ni un
-instalador terminado para cualquier LG. La dirección visual elegida es Apple TV, con rendimiento
-como prioridad; la TV sigue con el diseño de 0.7.5.
-[Guía del piloto](docs/local-installer.md) · [límites del navegador](docs/browser-installer.md).
-
-## Documentación y procedencia
-
-- [Tutorial de principio a fin](docs/tutorial.md).
-- [Asistente local: piloto con root existente](docs/local-installer.md).
-- [Qué falló y cómo se resolvió](docs/what-we-tried.md).
-- [Root y recuperación](docs/root-and-home.md).
-- [Limpieza ejecutada](docs/cleaning.md) y [auditoría de privacidad](docs/privacy-cleanup.md).
-- [Rendimiento](docs/performance.md), [Luces](docs/lights.md) y [captura](docs/screen-sync.md).
-- [Fuentes](docs/sources.md) y [licencia](LICENSE).
-
-El diseño original y el primer tutorial se trabajaron con Claude Opus 5.5 high. Las
-integraciones y el rework 0.7.4 se terminaron con Codex; Opus no pudo iniciarse en esa sesión.
-No hay afiliación con LG, WiZ ni las marcas de los accesos.
+### Authors
+Built with **Codex** (OpenAI), which did the first adaptation to this TV (root, debloat, auto-start and the first design), and
+**Claude** (Anthropic), which continued (dock, photos, Home, tests and publishing), on top of **frxnnk**'s base project.

@@ -1,0 +1,420 @@
+/* Variante elegida: reloj protagonista y dock inferior minimalista. */
+.shell {
+  position: relative;
+  min-height: 100%;
+  padding: 0 6%;
+  font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+}
+
+.identity,
+.navigation-hint,
+.dock-frost,
+.dock-divider,
+.dock-inputs,
+.tile-glow,
+.tile-tint,
+.tile-note {
+  display: none !important;
+}
+
+.topbar {
+  position: absolute;
+  z-index: 5;
+  top: 7%;
+  left: 6%;
+  display: block;
+  width: 31rem;
+  height: auto;
+}
+
+.top-actions {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+}
+
+.clock {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  width: auto;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
+}
+
+html .clock,
+html .weather {
+  background-color: transparent;
+  background-image: none;
+}
+
+html:not(.force-fallback) .clock,
+html:not(.force-fallback) .weather {
+  background-color: transparent;
+}
+
+.clock:after,
+.weather:after,
+.dock:after {
+  display: none;
+}
+
+.clock:before,
+.weather:before,
+.dock:before {
+  display: none !important;
+}
+
+#clock {
+  margin-top: .35rem;
+  font-size: 7.4rem;
+  font-weight: 300;
+  line-height: .9;
+  letter-spacing: -.07em;
+  text-shadow: 0 .2rem 1.8rem rgba(0, 0, 0, .42);
+}
+
+#date {
+  color: rgba(255, 255, 255, .86);
+  font-size: 1.08rem;
+  font-weight: 500;
+  letter-spacing: .19em;
+  text-transform: uppercase;
+  text-shadow: 0 .1rem .6rem rgba(0, 0, 0, .45);
+}
+
+.weather {
+  display: flex;
+  align-items: center;
+  width: auto;
+  height: auto;
+  margin: 1.35rem 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.weather-icon {
+  width: 2.2rem;
+  height: 2.2rem;
+  margin-right: .7rem;
+  color: #fff;
+  -webkit-filter: drop-shadow(0 .1rem .4rem rgba(0,0,0,.4));
+  filter: drop-shadow(0 .1rem .4rem rgba(0,0,0,.4));
+}
+
+.weather-temp {
+  margin-right: .75rem;
+  font-size: 1.5rem;
+  font-weight: 400;
+}
+
+.weather-text {
+  display: block;
+  max-width: 18rem;
+}
+
+.weather-condition,
+.weather-meta {
+  display: inline;
+  color: rgba(255,255,255,.82);
+  font-size: 1.02rem;
+  font-weight: 400;
+}
+
+.weather-condition:after {
+  content: " · ";
+}
+
+.home {
+  position: absolute;
+  right: 0;
+  bottom: 6.8%;
+  left: 5.6%;
+  display: block;
+}
+
+.selected-title {
+  margin: 0 0 1rem 1.3rem;
+  color: #fff;
+  font-size: 1.55rem;
+  font-weight: 500;
+  letter-spacing: -.025em;
+  text-shadow: 0 .15rem .8rem rgba(0,0,0,.5);
+}
+
+.dock {
+  display: block;
+  width: auto;
+  height: auto;
+  margin-right: 5.6%;
+  padding: 1.45rem 1.35rem;
+  overflow: visible;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 2.4rem;
+  background: rgba(10,12,18,.34);
+  background-image: linear-gradient(145deg, rgba(255,255,255,.1), rgba(255,255,255,.015) 55%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.15), 0 1.2rem 3.2rem rgba(0,0,0,.3);
+}
+
+.dock-apps {
+  width: 100%;
+}
+
+.tiles-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  -webkit-transition: -webkit-transform .24s ease;
+  transition: transform .24s ease;
+}
+
+/* Recorta solo en horizontal (hasta el borde del vidrio); sombras y escalado quedan libres arriba y abajo. */
+.dock-apps {
+  -webkit-clip-path: inset(-3rem -1.35rem -3rem -1.35rem);
+  clip-path: inset(-3rem -1.35rem -3rem -1.35rem);
+}
+
+.tile {
+  position: relative;
+  display: block;
+  flex: 0 0 11.8rem;
+  width: 11.8rem;
+  height: 6.85rem;
+  margin: 0 1.4rem 0 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 1.15rem;
+  background: rgba(241, 243, 248, .92);
+  box-shadow: 0 .55rem 1.6rem rgba(0,0,0,.32);
+  -webkit-transition: -webkit-transform .22s ease, box-shadow .22s ease;
+  transition: transform .22s ease, box-shadow .22s ease;
+}
+
+.tile:last-child { margin-right: 0; }
+
+.tile-glass {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 1.15rem;
+  background: transparent;
+  box-shadow: none;
+  -webkit-transition: none;
+  transition: none;
+}
+
+.tile-logo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 1.15rem;
+  object-fit: cover;
+}
+
+.tile[data-id="personalize"] .tile-logo,
+.tile[data-id="lghome"] .tile-logo {
+  top: 27%;
+  left: 35%;
+  width: 30%;
+  height: 46%;
+  border-radius: 0;
+  object-fit: contain;
+}
+
+.tile-ring {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  top: -.18rem;
+  right: -.18rem;
+  bottom: -.18rem;
+  left: -.18rem;
+  border: .2rem solid rgba(255,255,255,.96);
+  border-radius: 1.32rem;
+  opacity: 0;
+  box-shadow: 0 0 1.25rem rgba(255,255,255,.3), 0 1.2rem 2.8rem rgba(0,0,0,.46);
+}
+
+.tile:focus,
+.tile.is-current,
+.tile:hover {
+  z-index: 2;
+  outline: 0;
+  -webkit-transform: translateY(-.55rem) scale(1.09);
+  transform: translateY(-.55rem) scale(1.09);
+  box-shadow: 0 1.35rem 3rem rgba(0,0,0,.46);
+}
+
+.tile:focus .tile-glass,
+.tile.is-current .tile-glass,
+.tile:hover .tile-glass {
+  -webkit-transform: none;
+  transform: none;
+}
+
+.tile:focus .tile-ring,
+.tile.is-current .tile-ring,
+.tile:hover .tile-ring {
+  opacity: 1;
+}
+
+.tile[data-id="max"] {
+  background: linear-gradient(135deg, #3c22d8, #04178b);
+}
+
+.tile[data-id="prime"] {
+  background: linear-gradient(145deg, #1673ff, #073eaf);
+}
+
+.tile[data-id="movistar"] {
+  background: linear-gradient(145deg, #07d4d2, #0569cf);
+}
+
+.tile[data-id="disney"] {
+  background: linear-gradient(145deg, #173e9c, #071a4b);
+}
+
+.tile[data-id="personalize"] {
+  background: rgba(25,27,34,.82);
+}
+
+.tile[data-id="lghome"] {
+  background: linear-gradient(145deg, #a50034, #5e0020);
+}
+
+/* Solo fondo: se ocultan reloj, clima, dock y créditos; la foto sigue rotando. */
+.is-clean .topbar,
+.is-clean .home,
+.is-clean .footer {
+  visibility: hidden;
+}
+
+/* V2: wordmarks vectoriales, superficies de marca y proporciones más cercanas a tvOS. */
+.tile-glass:after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: auto;
+  border-radius: inherit;
+  background: linear-gradient(155deg, rgba(255,255,255,.16), transparent 38%, rgba(0,0,0,.07));
+  pointer-events: none;
+}
+
+.tile[data-id="netflix"] { background: #080808; }
+.tile[data-id="max"] { background: linear-gradient(145deg, #7047eb, #38219b); }
+.tile[data-id="movistar"] { background: #f5f8fb; }
+.tile[data-id="youtube"] { background: #f7f7f7; }
+
+.tile[data-id="netflix"] .tile-logo,
+.tile[data-id="max"] .tile-logo,
+.tile[data-id="movistar"] .tile-logo,
+.tile[data-id="youtube"] .tile-logo {
+  z-index: 1;
+  top: 24%;
+  left: 24%;
+  width: 52%;
+  height: 52%;
+  border-radius: 0;
+  object-fit: contain;
+}
+
+.tile[data-id="netflix"] .tile-logo { top: 20%; left: 37%; width: 26%; height: 60%; }
+.tile[data-id="max"] .tile-logo { -webkit-filter: invert(1); filter: invert(1); }
+.tile[data-id="movistar"] .tile-logo { top: 21%; left: 32%; width: 36%; height: 58%; }
+.tile[data-id="youtube"] .tile-logo { top: 22%; left: 31%; width: 38%; height: 56%; }
+
+.weather-condition { display: none; }
+.weather-condition:after { content: none; }
+.weather-meta {
+  color: rgba(255,255,255,.86);
+  font-size: 1.1rem;
+  letter-spacing: .035em;
+}
+
+.footer {
+  position: absolute;
+  right: 6%;
+  bottom: 3.2%;
+  left: 6%;
+  display: flex;
+  height: auto;
+  margin: 0;
+  color: rgba(255,255,255,.65);
+  font-size: .85rem;
+  letter-spacing: .03em;
+}
+
+.footer-info {
+  margin: 0;
+}
+
+#status {
+  display: none;
+}
+
+#status.alert {
+  display: block;
+}
+
+.photo-credit {
+  color: rgba(255, 255, 255, .8);
+  font-size: 1.15rem;
+}
+
+.shade {
+  background: linear-gradient(90deg, rgba(3,4,8,.44), rgba(3,4,8,.02) 62%),
+              linear-gradient(0deg, rgba(3,4,8,.58), transparent 54%);
+}
+
+/* Personalizar en TV: las 9 filas caben entre el título y los botones (antes empujaban los botones fuera
+   del panel y de la pantalla), y el foco no anima ni dibuja sombras difusas: solo un aro nítido. */
+.manage-list { min-height: 0; overflow: hidden; margin-top: 1.4rem; }
+.manage-row { height: 4.4rem; }
+html.is-tv .manage-panel,
+html.is-tv .scrim {
+  -webkit-animation: none !important;
+  animation: none !important;
+}
+html.is-tv .switch-button,
+html.is-tv .move-button,
+html.is-tv .ghost-button,
+html.is-tv .primary-button {
+  -webkit-transition: none;
+  transition: none;
+}
+html.is-tv .switch-button:focus,
+html.is-tv .move-button:focus,
+html.is-tv .ghost-button:focus,
+html.is-tv .primary-button:focus {
+  box-shadow: 0 0 0 .28rem rgba(255, 255, 255, .55);
+  -webkit-transform: none;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile, .tiles-row { -webkit-transition: none; transition: none; }
+}

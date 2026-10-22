@@ -1,4 +1,4 @@
-// Fotos del día: paisajes destacados de Wikimedia Commons, sin backend, cuenta ni clave.
+// Fotos del día: destinos de viaje de Wikimedia Commons, sin backend, cuenta ni clave.
 // Config en daily-photos-config.js (window.LAUNCHER_DAILY_PHOTOS = { endpoint, count }).
 // Una consulta por día local de la TV (máximo dos lotes si el primero no deja ninguna foto útil).
 // Se guarda en localStorage solo la metadata validada, el día y el token de continuación que
@@ -7,8 +7,8 @@
 // APIs: https://www.mediawiki.org/wiki/API:Categorymembers y https://www.mediawiki.org/wiki/API:Imageinfo
 (function () {
   'use strict';
-  var STORAGE_KEY = 'mi-pantalla-daily-photos-v1';
-  var MAX_COUNT = 6;
+  var STORAGE_KEY = 'mi-pantalla-daily-photos-v5';
+  var MAX_COUNT = 50; // tope de la API de Commons para pageids
   var MAX_REQUESTS = 2;
   var TIMEOUT_MS = 10000;
   var RETRY_MS = 60 * 60 * 1000; // tras una falla: como mucho un pedido por hora
@@ -97,7 +97,8 @@
   function number(value) { return typeof value === 'number' && isFinite(value) ? value : 0; }
 
   // Una página de la respuesta → foto validada, o null.
-  function parsePage(page) {
+  // curated: la lista de destinos la eligió una persona (pageids=), así que no se filtra por palabras.
+  function parsePage(page, curated) {
     if (!page || typeof page !== 'object' || typeof page.title !== 'string') return null;
     var id = number(page.pageid);
     var info = Array.isArray(page.imageinfo) ? page.imageinfo[0] : null;
@@ -116,7 +117,7 @@
     if (!license || !author) return null;
     var title = plain(page.title.replace(/^File:/i, '').replace(/\.jpe?g$/i, ''), 90);
     var description = htmlToText(metaValue(meta, 'ImageDescription'), 160);
-    if (UNWANTED.test(title + ' ' + description)) return null;
+    if (!curated && UNWANTED.test(title + ' ' + description)) return null;
     return {
       id: id, src: src, width: width, height: height, title: title, author: author,
       license: license.license, licenseUrl: license.licenseUrl, page: pageUrl, description: description
@@ -130,16 +131,17 @@
   }
 
   // Respuesta → { photos, next } o null si no es una respuesta válida (incluye error/maxlag).
-  function parseResponse(body) {
+  function parseResponse(body, curated, places) {
     if (!body || typeof body !== 'object' || Array.isArray(body) || body.error) return null;
     var pages = body.query === undefined ? [] : body.query && body.query.pages;
     if (!Array.isArray(pages)) return null;
     var seen = {};
     var photos = [];
     pages.slice(0, 500).forEach(function (page) {
-      var photo = parsePage(page);
+      var photo = parsePage(page, curated);
       if (!photo || seen[photo.id] || seen[photo.src]) return;
       seen[photo.id] = seen[photo.src] = true;
+      if (places && typeof places[photo.id] === 'string') photo.place = plain(places[photo.id], 60);
       photos.push(photo);
     });
     return { photos: photos, next: validToken(body['continue']) };
@@ -149,7 +151,7 @@
     if (!config || typeof config.endpoint !== 'string' || config.endpoint.length > 2000) return null;
     if (!ENDPOINT.test(config.endpoint) || /[?&](?:gcmcontinue|continue)=/.test(config.endpoint)) return null;
     var count = Math.floor(Number(config.count));
-    return { endpoint: config.endpoint, count: count >= 1 ? Math.min(count, MAX_COUNT) : MAX_COUNT };
+    return { endpoint: config.endpoint, curated: /[?&]pageids=/.test(config.endpoint), places: config.places && typeof config.places === 'object' ? config.places : null, count: count >= 1 ? Math.min(count, MAX_COUNT) : MAX_COUNT };
   }
 
   // Solo agrega el token que la API devolvió; sin token, la primera página de la categoría.
@@ -191,7 +193,7 @@
     return {
       id: photo.id, src: photo.src, width: photo.width, height: photo.height, title: photo.title,
       author: photo.author, license: photo.license, licenseUrl: photo.licenseUrl, page: photo.page,
-      description: photo.description
+      description: photo.description, place: photo.place || ''
     };
   }
 
@@ -212,7 +214,8 @@
       seen[id] = true;
       clean.push({
         id: id, src: entry.src, width: width, height: height, title: plain(entry.title, 90), author: author,
-        license: license.license, licenseUrl: license.licenseUrl, page: entry.page, description: plain(entry.description, 160)
+        license: license.license, licenseUrl: license.licenseUrl, page: entry.page, description: plain(entry.description, 160),
+        place: plain(entry.place, 60)
       });
     });
     return clean;
@@ -314,7 +317,7 @@
         request(buildUrl(config.endpoint, token), TIMEOUT_MS, function (error, body) {
           if (answered) return;
           answered = true;
-          var parsed = error ? null : parseResponse(body);
+          var parsed = error ? null : parseResponse(body, config.curated, config.places);
           if (!parsed) { fail(); return; }
           if (!parsed.photos.length && parsed.next && used < MAX_REQUESTS) { batch(parsed.next); return; }
           succeed(today, parsed);

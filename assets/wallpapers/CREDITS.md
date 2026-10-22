@@ -1,14 +1,12 @@
-# Fondos fotograficos
+# Fondos fotograficos de respaldo
 
-Descargados el 20 de octubre de 2026 desde las paginas y CDN oficiales de Unsplash, en JPEG de 1920 px de ancho. Se incluyen localmente para funcionar sin Internet. La presentacion recorta mediante CSS `object-fit: cover`; no hay modificaciones artisticas.
+Descargados de Wikimedia Commons el 21 de octubre de 2026 (miniatura de 1920 px, recorte centrado 16:9 y recompresion JPEG baseline 1920x1080). Se incluyen para funcionar sin Internet; con conexion se usan los destinos del dia.
 
-Todos bajo la [licencia Unsplash](https://unsplash.com/license), que permite descargar, copiar, modificar y usar las fotos, incluso comercialmente. La atribucion no es obligatoria y se conserva aqui.
+| Archivo | Autor | Licencia | Origen |
+| --- | --- | --- | --- |
+| santorini-oia.jpg | Giles Laurent | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:1000_Three_domes_of_Oia_in_Santorini_Photo_by_Giles_Laurent.jpg |
+| machu-picchu.jpg | Diego Delso | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Machu_Picchu,_Per%C3%BA,_2015-07-30,_DD_47.JPG |
+| positano.jpg | Bernard Gagnon | CC BY 4.0 | https://commons.wikimedia.org/wiki/File:Positano_(Italy)_04.jpg |
+| mount-fuji.jpg | Romain Guy from San Francisco, USA | CC0 | https://commons.wikimedia.org/wiki/File:Mount_Fuji_at_sunset,_March_2025.jpg |
 
-| Archivo | Autor | Foto |
-| --- | --- | --- |
-| moraine-lake.jpg | John Lee | https://unsplash.com/photos/scenery-of-mountain-oMneOBYhJxY |
-| sunset-coast.jpg | Harley Lin | https://unsplash.com/photos/the-sun-is-setting-over-the-ocean-with-a-rock-in-the-foreground-HUVIdpuCUdI |
-| misty-forest.jpg | Kyle Glenn | https://unsplash.com/photos/green-leafed-pine-trees-SrASYZZpyjw |
-| milky-way.jpg | Robson Hatsukami Morgan | https://unsplash.com/photos/silhouette-of-mountains-under-milky-way-galaxy--wEFdRCG4IU |
-
-No hay llamadas a Unsplash desde la TV. Los creditos se distribuyen dentro del paquete.
+Las licencias CC BY / CC BY-SA exigen atribucion: se muestra en pantalla (Fuentes) y aqui. No hay llamadas a Commons para estos archivos desde la TV.

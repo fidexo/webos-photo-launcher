@@ -1,7 +1,7 @@
 {
-  "id": "com.frxn.mipantalla",
-  "version": "0.7.5",
-  "vendor": "FRXN",
+  "id": "com.fidexo.photolauncher",
+  "version": "1.8.0",
+  "vendor": "fidexo",
   "type": "web",
   "main": "index.html",
   "title": "Mi pantalla",

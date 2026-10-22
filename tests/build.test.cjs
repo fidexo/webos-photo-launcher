@@ -5,8 +5,8 @@ const os = require('node:os');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const root = path.join(__dirname, '..');
-const APP_FILES = ['index.html', 'styles.css', 'config.js', 'bridge.js', 'weather.js', 'backgrounds.js', 'daily-photos.js', 'transitions.js', 'ambient-wallpaper.js', 'lights-client.js', 'lights-panel.js', 'lights-panel.css', 'app.js', 'appinfo.json', 'icon.png', 'LICENSE'];
-const FIXTURE_HTML = '<script src="config.js"></script>\n  <script src="wallpapers.js"></script>\n  <script src="weather-config.js"></script>\n  <script src="daily-photos-config.js"></script>\n  <script src="transitions-config.js"></script>\n  <script src="app.js"></script>';
+const APP_FILES = ['index.html', 'styles.css', 'apple-tv.css','config.js', 'bridge.js', 'weather.js', 'backgrounds.js', 'daily-photos.js', 'transitions.js', 'ambient-wallpaper.js', 'lights-client.js', 'lights-panel.js', 'lights-panel.css', 'app.js', 'appinfo.json', 'icon.png', 'LICENSE'];
+const FIXTURE_HTML = '<script src="config.js"></script>\n  <script src="wallpapers.js"></script>\n  <script src="weather-config.js"></script>\n  <script src="daily-photos-config.js"></script>\n  <script src="app.js"></script>';
 
 function withFixture(prepare, check) {
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'mi-pantalla-build-'));
@@ -42,8 +42,8 @@ test('rebuilding excludes obsolete files and works without the parent configs', 
     assert.equal(fs.existsSync(dist(fixture, 'obsolete-secret.txt')), false);
     const html = fs.readFileSync(dist(fixture, 'index.html'), 'utf8');
     assert.match(html, /vendor\/webOSTV.js/);
-    assert.doesNotMatch(html, /wallpapers\.js|weather-config\.js|daily-photos-config\.js|transitions-config\.js/, 'missing configs leave no dangling script tags');
-    for (const file of ['weather.js', 'backgrounds.js', 'daily-photos.js', 'transitions.js']) assert.equal(fs.existsSync(dist(fixture, file)), true, file);
+    assert.doesNotMatch(html, /wallpapers\.js|weather-config\.js|daily-photos-config\.js/, 'missing configs leave no dangling script tags');
+    for (const file of ['weather.js', 'backgrounds.js', 'daily-photos.js']) assert.equal(fs.existsSync(dist(fixture, file)), true, file);
     assert.equal(fs.readFileSync(dist(fixture, 'assets/wallpaper.svg'), 'utf8'), '<svg/>');
     assert.equal(fs.existsSync(dist(fixture, 'assets/logos/mark.svg')), true);
     assert.equal(fs.existsSync(dist(fixture, 'assets/notes.txt')), false);
@@ -60,15 +60,13 @@ test('parent configs, listed photos and their licence notes are packaged', () =>
     fs.writeFileSync(path.join(fixture, 'wallpapers.js'), "window.LAUNCHER_WALLPAPERS = [{ src: 'assets/wallpapers/delta.jpg', author: 'A', source: 'B' }, { src: 'assets/wallpapers/sierra.webp' }];");
     fs.writeFileSync(path.join(fixture, 'weather-config.js'), 'window.LAUNCHER_WEATHER = null;');
     fs.writeFileSync(path.join(fixture, 'daily-photos-config.js'), "window.LAUNCHER_DAILY_PHOTOS = { endpoint: 'https://commons.wikimedia.org/w/api.php?action=query', count: 6 };");
-    fs.writeFileSync(path.join(fixture, 'transitions-config.js'), "window.LAUNCHER_TRANSITIONS = [{ videoId: 'abcdefghijk', title: 'Transitions 1', url: 'https://www.youtube.com/watch?v=abcdefghijk' }, { videoId: 'bad' }];");
   }, (fixture, failure, log) => {
     assert.equal(failure, null, failure && failure.stderr.toString());
     const html = fs.readFileSync(dist(fixture, 'index.html'), 'utf8');
-    for (const name of ['wallpapers', 'weather-config', 'daily-photos-config', 'transitions-config']) {
+    for (const name of ['wallpapers', 'weather-config', 'daily-photos-config']) {
       assert.ok(html.includes('<script src="' + name + '.js"></script>'), name);
     }
-    assert.match(log, /Transitions: 1 episodios válidos/);
-    for (const file of ['wallpapers.js', 'weather-config.js', 'daily-photos-config.js', 'transitions-config.js', 'assets/wallpapers/delta.jpg', 'assets/wallpapers/sierra.webp', 'assets/wallpapers/CREDITS.md']) {
+    for (const file of ['wallpapers.js', 'weather-config.js', 'daily-photos-config.js', 'assets/wallpapers/delta.jpg', 'assets/wallpapers/sierra.webp', 'assets/wallpapers/CREDITS.md']) {
       assert.equal(fs.existsSync(dist(fixture, file)), true, file);
     }
     assert.equal(fs.existsSync(dist(fixture, 'assets/wallpapers/run.sh')), false);
@@ -102,7 +100,6 @@ test('every asset referenced by the app exists locally', () => {
   const references = Array.from(new Set(sources.match(/assets\/[\w/.-]+\.\w+/g) || []));
   assert.ok(references.includes('assets/wallpaper.svg'), 'SVG fallback wallpaper is referenced');
   assert.ok(references.length >= 8, 'fallback wallpaper and seven marks are referenced');
-  assert.ok(references.includes('assets/logos/transitions.svg'), 'Transitions references its local icon');
   for (const reference of references) {
     assert.match(reference, /\.(?:svg|jpe?g|webp|png)$/);
     assert.equal(fs.statSync(path.join(root, reference)).isFile(), true, reference);
@@ -141,7 +138,4 @@ test('Transitions opens YouTube only from the tile click, never on focus or load
   assert.match(app, /tile\.addEventListener\('click', function \(\) \{ openItem\(item\); \}\)/);
   const focusCode = app.slice(app.indexOf('function showFocus'), app.indexOf('// ---------- Inicio'));
   assert.doesNotMatch(focusCode, /openItem|openTransitions|transitions\.|bridge\./);
-  const config = fs.readFileSync(path.join(root, 'config.js'), 'utf8');
-  assert.match(config, /key: 'transitions'[^\n]*appId: 'youtube\.leanback\.v4'/, 'availability is queried for YouTube, not a made-up app');
-  assert.ok(config.indexOf("key: 'disney'") < config.indexOf("key: 'transitions'") && config.indexOf("key: 'transitions'") < config.indexOf("key: 'hdmi1'"));
 });

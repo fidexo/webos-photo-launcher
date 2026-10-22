@@ -142,9 +142,9 @@ test('the request URL only carries the continuation the API returned', () => {
     { endpoint: ENDPOINT + '&gcmcontinue=1' }, { endpoint: ENDPOINT + '"><script>' }, { endpoint: 7 }]) {
     assert.equal(D.validConfig(config), null, JSON.stringify(config));
   }
-  assert.equal(D.validConfig({ endpoint: ENDPOINT, count: 10 }).count, 6);
+  assert.equal(D.validConfig({ endpoint: ENDPOINT, count: 100 }).count, 50);
   assert.equal(D.validConfig({ endpoint: ENDPOINT, count: 3 }).count, 3);
-  assert.equal(D.validConfig({ endpoint: ENDPOINT }).count, 6);
+  assert.equal(D.validConfig({ endpoint: ENDPOINT }).count, 50);
 });
 
 test('the day is the TV local date and midnight is computed locally', () => {
@@ -403,7 +403,7 @@ test('the parent endpoint is accepted as configured', { skip: !fs.existsSync(pat
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'daily-photos-config.js'), 'utf8'), sandbox);
   const config = D.validConfig(sandbox.window.LAUNCHER_DAILY_PHOTOS);
   assert.ok(config, 'validConfig accepts the parent endpoint');
-  assert.ok(config.count >= 1 && config.count <= 6);
+  assert.ok(config.count >= 1 && config.count <= 50);
 });
 
 test('authors lose a trailing period but keep initials', () => {
@@ -411,4 +411,27 @@ test('authors lose a trailing period but keep initials', () => {
   assert.equal(author('Dominicus Johannes Bergsma.'), 'Dominicus Johannes Bergsma');
   assert.equal(author('A.Savin'), 'A.Savin');
   assert.equal(author('John Q.'), 'John Q.');
+});
+
+test('a curated pageids endpoint keeps travel photos whose title mentions villages or temples', () => {
+  const page = { pageid: 5, title: 'File:Oia village and temple.jpg', imageinfo: [{ mime: 'image/jpeg', thumbwidth: 1920, thumbheight: 1080,
+    thumburl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Oia.jpg/1920px-Oia.jpg',
+    descriptionurl: 'https://commons.wikimedia.org/wiki/File:Oia_village.jpg',
+    extmetadata: { Artist: { value: 'Ana' }, LicenseShortName: { value: 'CC BY-SA 4.0' }, LicenseUrl: { value: 'https://creativecommons.org/licenses/by-sa/4.0' } } }] };
+  assert.equal(D.parsePage(page), null);
+  assert.equal(D.parsePage(page, true).title, 'Oia village and temple');
+  assert.equal(D.validConfig({ endpoint: 'https://commons.wikimedia.org/w/api.php?action=query&pageids=1%7C2' }).curated, true);
+  assert.equal(D.validConfig({ endpoint: ENDPOINT }).curated, false);
+});
+
+test('the curated pageids list stays within the Commons API limit of 50 and every id has a place name', { skip: !fs.existsSync(path.join(__dirname, '..', 'daily-photos-config.js')) && 'sin config' }, () => {
+  const sandbox = { window: {} };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'daily-photos-config.js'), 'utf8'), sandbox);
+  const config = sandbox.window.LAUNCHER_DAILY_PHOTOS;
+  const match = /[?&]pageids=([\d%A-F]+)/.exec(config.endpoint);
+  if (!match) return;
+  const ids = match[1].split('%7C');
+  assert.ok(ids.length <= 50, 'the API rejects more than 50 pageids per request');
+  assert.equal(new Set(ids).size, ids.length);
+  for (const id of ids) assert.ok(config.places && typeof config.places[id] === 'string' && config.places[id], 'place for ' + id);
 });

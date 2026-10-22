@@ -5,7 +5,7 @@ var PID_FILE = '/tmp/mipantalla-home.pid';
 var LOG_FILE = '/tmp/mipantalla-home.log';
 var LOG_LIMIT = 65536;
 var LAUNCH_URI = 'luna://com.webos.applicationManager/launch';
-var LAUNCH_PAYLOAD = '{"id":"com.frxn.mipantalla"}';
+var LAUNCH_PAYLOAD = '{"id":"com.fidexo.photolauncher"}';
 var LAUNCH_ARGS = ['-n', '1', '-f', LAUNCH_URI, LAUNCH_PAYLOAD];
 var LAUNCH_OPTIONS = {timeout: 2500, maxBuffer: 8192, encoding: 'utf8'};
 var EVENT_BYTES = 16;
@@ -127,7 +127,7 @@ function createDaemon(rawConfig, rawDeps) {
   var launchInFlight = null;
   var lastHeartbeat = now();
   var lastHome = -Infinity;
-  var readBuffer = Buffer.alloc(READ_BYTES);
+  var readBuffer = new Buffer(READ_BYTES);
 
   function schedule(fn, delay) {
     var id = setTimeoutFn(function () {
@@ -292,7 +292,7 @@ function createDaemon(rawConfig, rawDeps) {
       return;
     }
     delete failedDevices[name];
-    devices.push({name: name, fd: fd, remainder: Buffer.alloc(0)});
+        devices.push({name: name, fd: fd, remainder: new Buffer(0)});
   }
 
   function discover() {
@@ -319,7 +319,7 @@ function createDaemon(rawConfig, rawDeps) {
       try {
         parsed = parseEvents(readBuffer.slice(0, bytes), device.remainder);
       } catch (error) {
-        device.remainder = Buffer.alloc(0);
+        device.remainder = new Buffer(0);
         continue;
       }
       device.remainder = parsed.remainder;

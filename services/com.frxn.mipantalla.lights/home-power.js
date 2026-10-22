@@ -4,6 +4,11 @@ var URI = 'luna://com.webos.service.tvpower/power/getPowerState';
 var MAX_BUFFER = 4096;
 var RECONNECT_MS = 5000;
 
+function byteIndex(buffer, value) {
+  for (var i = 0; i < buffer.length; i += 1) if (buffer[i] === value) return i;
+  return -1;
+}
+
 module.exports = function watchPower(onWake, rawDeps) {
   var deps = rawDeps || {};
   var spawn = deps.spawn || require('child_process').spawn;
@@ -32,13 +37,13 @@ module.exports = function watchPower(onWake, rawDeps) {
   }
   function receive(connection, chunk) {
     if (stopped || active !== connection) return;
-    var bytes = typeof chunk === 'string' ? Buffer.from(chunk,'utf8') : chunk;
+    var bytes = typeof chunk === 'string' ? new Buffer(chunk,'utf8') : chunk;
     if (!Buffer.isBuffer(bytes) || bytes.length + connection.buffer.length > MAX_BUFFER) {
       failed(connection); return;
     }
     connection.buffer = Buffer.concat([connection.buffer,bytes]);
     var index;
-    while (!stopped && active === connection && (index = connection.buffer.indexOf(10)) !== -1) {
+    while (!stopped && active === connection && (index = byteIndex(connection.buffer,10)) !== -1) {
       var line = connection.buffer.slice(0,index).toString('utf8').trim();
       connection.buffer = connection.buffer.slice(index + 1);
       if (!line) continue;
@@ -59,7 +64,7 @@ module.exports = function watchPower(onWake, rawDeps) {
   }
   function start() {
     if (stopped || active) return;
-    var connection = {child:null,buffer:Buffer.alloc(0),killed:false};
+    var connection = {child:null,buffer:new Buffer(0),killed:false};
     active = connection;
     try {
       connection.child = spawn('luna-send',['-i',URI,'{"subscribe":true}'],{stdio:['ignore','pipe','ignore']});

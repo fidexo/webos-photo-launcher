@@ -26,6 +26,7 @@ function build(htmlClass) {
   let html = inlineAssets(read('index.html'));
   html = html.replace('<html lang="es">', '<html lang="es" class="' + htmlClass + '">');
   html = html.replace('<link rel="stylesheet" href="styles.css">', () => '<style>\n' + inlineAssets(read('styles.css')) + '</style>');
+  html = html.replace('<link rel="stylesheet" href="apple-tv.css">', () => '<style>\n' + inlineAssets(read('apple-tv.css')) + '</style>');
   html = html.replace('<link rel="stylesheet" href="lights-panel.css">', () => '<style>\n' + inlineAssets(read('lights-panel.css')) + '</style>');
   // Las capturas automáticas deben mostrar los siete accesos y el fondo desde el primer cuadro.
   html = html.replace('</head>', '<style>.is-preview .tile{-webkit-animation:none;animation:none}.is-preview .aura,.is-preview .wallpaper-layer,.is-preview .frost-layer{transition:none}</style></head>');

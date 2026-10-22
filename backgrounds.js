@@ -8,14 +8,16 @@
 // Nunca se leen píxeles del canvas (una foto remota lo deja "tainted" y no importa).
 (function () {
   'use strict';
-  var ROTATE_MS = 5 * 60 * 1000;
+  var ROTATE_MS = 12 * 1000;
   var FADE_MS = 1200;
   var LOAD_TIMEOUT_MS = 15000;
   var INITIAL_REMOTE_TIMEOUT_MS = 1500;
   var DECODE_WAIT_MS = 2000;
   var FROST_WIDTH = 160;
   var FROST_BLUR = 3; // px de la miniatura ≈ 36 px a 1920
-  var STORAGE_KEY = 'mi-pantalla-wallpaper-v1';
+  var STORAGE_KEY = 'mi-pantalla-wallpaper-v2';
+  var HIDDEN_KEY = 'mi-pantalla-wallpaper-hidden-v1'; // fotos que el dueño descartó con el botón rojo
+  var HIDDEN_MAX = 60;
   var LOCAL_SRC = /^assets\/wallpapers\/\w[\w.-]*\.(?:jpe?g|webp|png)$/i;
   var INLINE_SRC = /^data:image\/(?:jpeg|webp|png);base64,/; // solo la vista previa autocontenida
   var REMOTE_SRC = /^https:\/\/(?:upload|thumb)\.wikimedia\.org\/wikipedia\/commons\/[\w\/.~%!$*(),;:@'+-]+\.jpe?g$/i;
@@ -35,7 +37,7 @@
       var src = entry.src.trim();
       var remote = allowRemote === true && REMOTE_SRC.test(src);
       if (!(remote || LOCAL_SRC.test(src) || INLINE_SRC.test(src)) || seen[src]) return;
-      var item = { src: src, author: text(entry.author), source: text(entry.source) };
+      var item = { src: src, author: text(entry.author), source: text(entry.source), place: text(entry.place) };
       if (remote) {
         // Una foto remota sin autor, licencia y página de origen no se muestra.
         item.source = '';
@@ -54,27 +56,29 @@
 
   function creditText(entry) {
     if (!entry) return '';
-    if (entry.provider) return 'Foto: ' + [entry.author, entry.provider, entry.license].filter(Boolean).join(' · ');
+    var place = entry.place ? entry.place + ' · ' : '';
+    if (entry.provider) return place + 'Foto: ' + [entry.author, entry.provider, entry.license].filter(Boolean).join(' · ');
     var source = entry.source;
     var host = /^https?:\/\/([^\/?#]+)/i.exec(source);
     if (host) source = host[1].replace(/^www\./i, '');
     var parts = [entry.author, source].filter(Boolean);
-    return parts.length ? 'Foto: ' + parts.join(' · ') : '';
+    return parts.length ? place + 'Foto: ' + parts.join(' · ') : place.replace(/ · $/, '');
   }
 
   // Datos completos de la foto a la vista para el panel Fuentes: pares [etiqueta, texto plano].
   function sourceDetails(entry) {
     if (!entry) return [];
+    var where = entry.place ? [['Lugar', entry.place]] : [];
     if (entry.provider) {
-      return [
+      return where.concat([
         ['Foto', entry.title || 'Sin título'],
         ['Autor', entry.author],
         ['Licencia', entry.license + (entry.licenseUrl ? ' · ' + entry.licenseUrl : '')],
         ['Origen', entry.provider + ' · ' + entry.page]
-      ];
+      ]);
     }
     if (!entry.author && !entry.source) return [['Fondo', 'Ilustración incluida en la app']];
-    return [['Foto', 'Incluida en la app'], ['Autor', entry.author || 'Sin dato'], ['Origen', entry.source || 'Sin dato']];
+    return where.concat([['Foto', 'Incluida en la app'], ['Autor', entry.author || 'Sin dato'], ['Origen', entry.source || 'Sin dato']]);
   }
 
   // Siguiente foto utilizable después de from (o la primera si from es -1); -1 si no queda ninguna.
@@ -145,7 +149,17 @@
     };
     var isHidden = options.isHidden || function () { return false; };
     var layers = options.layers;
-    var list = cleanList(options.list);
+    var hidden = [];
+    if (options.storage) {
+      try { hidden = JSON.parse(options.storage.getItem(HIDDEN_KEY) || '[]'); } catch (error) { hidden = []; }
+      if (!Array.isArray(hidden)) hidden = [];
+    }
+    // Sin las descartadas; si no quedara ninguna, se ignora el descarte para no dejar la pantalla vacía.
+    function visible(entries) {
+      var kept = entries.filter(function (entry) { return hidden.indexOf(entry.src) === -1; });
+      return kept.length ? kept : entries;
+    }
+    var list = visible(cleanList(options.list));
     var fallback = false;
     var base = null; // galería a la que se vuelve si la nueva no carga
     if (list.length) base = { list: list, fallback: false };
@@ -158,16 +172,36 @@
     var preloadTimer = null;
     var shownAt = 0;
     var shownSrc = null;
+    var random = options.random || Math.random;
+    var seen = {}; // fotos ya mostradas en esta vuelta del mazo aleatorio
     var pending = null; // galería nueva que espera su turno
     var replaced = false;
     var generation = 0;
-    var initialList = cleanList(options.initialList, true);
+    var initialList = visible(cleanList(options.initialList, true));
     if (initialList.length) { list = initialList; fallback = false; replaced = true; }
 
     function useFallback() {
       fallback = true;
       list = [{ src: options.fallback, author: '', source: '' }];
       base = { list: list, fallback: true };
+    }
+    // Orden aleatorio sin repetir: sortea entre las fotos usables que no se vieron en esta vuelta y no son
+    // from; al agotarlas empieza otra vuelta. Si solo queda from, se repite; -1 si no hay ninguna.
+    function pick(from) {
+      var fresh = [];
+      var others = [];
+      list.forEach(function (entry, index) {
+        if (entry.failed || index === from) return;
+        others.push(index);
+        if (!seen[entry.src]) fresh.push(index);
+      });
+      if (!fresh.length) { seen = {}; fresh = others; }
+      if (fresh.length) return fresh[Math.min(fresh.length - 1, Math.floor(random() * fresh.length))];
+      return from >= 0 && list[from] && !list[from].failed ? from : -1;
+    }
+    function indexOfSrc(src) {
+      for (var i = 0; i < list.length; i += 1) if (list[i].src === src) return i;
+      return -1;
     }
     function back() { return layers[front === 0 ? 1 : 0]; }
     function rotating() {
@@ -212,7 +246,7 @@
       fallback = false;
       replaced = true;
       current = -1;
-      show(list.length > 1 && list[0].src === shownSrc ? 1 : 0);
+      show(pick(indexOfSrc(shownSrc)));
     }
 
     // Ninguna foto de la galería nueva cargó: sigue la base desde la foto que está a la vista.
@@ -222,7 +256,7 @@
       fallback = base.fallback;
       current = -1;
       for (var i = 0; i < list.length; i += 1) if (list[i].src === shownSrc) current = i;
-      if (current === -1) { show(nextIndex(list, -1)); return; }
+      if (current === -1) { show(pick(-1)); return; }
       if (!layers[front].frostReady) deferInitialFrost(layers[front]);
       schedule(ROTATE_MS - (now() - shownAt));
       schedulePreload();
@@ -286,6 +320,7 @@
       current = index;
       shownAt = now();
       shownSrc = list[index].src;
+      seen[shownSrc] = true;
       preloaded = null;
       if (!initial && options.layout) options.layout();
       if (!fallback && options.storage) {
@@ -300,7 +335,7 @@
 
     function preloadNext() {
       if (isHidden() || busy || preloaded || !rotating()) return;
-      var index = nextIndex(list, current);
+      var index = pick(current);
       if (index === -1 || index === current) return;
       busy = true;
       prepare(index, function (ok) {
@@ -325,7 +360,7 @@
         if (fallback) { schedulePreload(); return; } // ni el SVG cargó: queda el color (o llega una galería nueva)
         list[index].failed = true;
         if (front === -1 && replaced) { restoreBase(); return; }
-        show(nextIndex(list, index));
+        show(pick(index));
       });
     }
 
@@ -334,7 +369,7 @@
       if (pending) { applyPending(); return; }
       if (busy) { schedule(5000); return; } // una carga sigue en curso: reintentar enseguida
       if (preloaded) { swap(preloaded.index); return; }
-      show(nextIndex(list, current));
+      show(pick(current));
     }
 
     return {
@@ -342,12 +377,10 @@
         var last = null;
         if (options.storage) { try { last = options.storage.getItem(STORAGE_KEY); } catch (error) { last = null; } }
         if (initialList.length) {
-          var index = 0;
-          for (var i = 0; i < list.length; i += 1) if (list[i].src === last) index = i;
-          show(index);
+          show(pick(indexOfSrc(last)));
           return;
         }
-        show(fallback ? 0 : startIndex(list, last));
+        show(fallback ? 0 : pick(indexOfSrc(last)));
       },
       visibilityChanged: function () {
         if (isHidden()) { schedule(0); schedulePreload(); return; }
@@ -368,11 +401,29 @@
       replace: function (next) {
         var clean = cleanList(next, true);
         if (!clean.length) return false;
+        clean = visible(clean);
         pending = clean;
         if (current === -1 || isHidden()) return true;
         if (busy) cancelLoad();
         schedulePreload();
         return true;
+      },
+      // Botón rojo: descarta la foto a la vista para siempre y pasa a la siguiente.
+      dislike: function () {
+        if (current === -1 || fallback || list.filter(function (entry) { return !entry.failed; }).length < 2) return false;
+        var entry = list[current];
+        if (hidden.indexOf(entry.src) === -1) hidden.push(entry.src);
+        hidden = hidden.slice(-HIDDEN_MAX);
+        if (options.storage) { try { options.storage.setItem(HIDDEN_KEY, JSON.stringify(hidden)); } catch (error) { /* sin persistencia */ } }
+        entry.failed = true;
+        advance();
+        return true;
+      },
+      // Restablecer: vuelven todas las fotos descartadas.
+      restoreHidden: function () {
+        hidden = [];
+        if (options.storage) { try { options.storage.removeItem(HIDDEN_KEY); } catch (error) { /* sin persistencia */ } }
+        list.forEach(function (entry) { delete entry.failed; });
       },
       current: function () { return current === -1 ? null : list[current]; },
       isFallback: function () { return fallback; },
@@ -425,6 +476,7 @@
       initialList: options.initialList,
       fallback: options.fallback,
       storage: storage,
+      random: options.random,
       isHidden: function () { return document.hidden === true; },
       load: loadImage,
       paint: paintFrost,

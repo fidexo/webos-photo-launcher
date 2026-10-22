@@ -14,7 +14,7 @@ function parseEvents(buffer, previous) {
   for (var offset = 0; offset < complete; offset += EVENT_BYTES) {
     events.push({type: bytes.readUInt16LE(offset + 8), code: bytes.readUInt16LE(offset + 10), value: bytes.readInt32LE(offset + 12)});
   }
-  var remainder = Buffer.alloc(bytes.length - complete);
+  var remainder = new Buffer(bytes.length - complete);
   bytes.copy(remainder, 0, complete);
   return {events: events, remainder: remainder};
 }

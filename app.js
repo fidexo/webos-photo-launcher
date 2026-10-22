@@ -23,12 +23,15 @@
   var backgrounds = null;
   var transitions = window.LauncherTransitions ? window.LauncherTransitions.mount(window.LAUNCHER_TRANSITIONS) : null;
   var sourcesOpen = false;
+  var dockStale = false; // el dock se reconstruye al cerrar Personalizar, no en cada cambio
 
   // Mensajes breves: el inicio queda limpio salvo errores o acciones en curso.
-  function say(message, lingerMs) {
+  // quiet: el mensaje de foco repite el título ya visible, así que no se muestra; avisos y errores sí.
+  function say(message, lingerMs, quiet) {
     clearTimeout(sayTimer);
+    status.className = message && !quiet ? 'alert' : '';
     status.textContent = message || '';
-    if (message && lingerMs) sayTimer = setTimeout(function () { status.textContent = ''; }, lingerMs);
+    if (message && lingerMs) sayTimer = setTimeout(function () { status.textContent = ''; status.className = ''; }, lingerMs);
   }
   function save() {
     try {
@@ -106,8 +109,53 @@
     }, function (error) { busy = false; say('No se pudo abrir ' + episode.title + ' en YouTube: ' + error.message); });
   }
 
+  // Solo fondo: la foto a pantalla completa. Se activa sola tras IDLE_MS sin actividad; cualquier tecla, clic o
+  // movimiento del puntero recupera la interfaz (esa primera tecla no hace nada más).
+  var IDLE_MS = 45 * 1000;
+  var clean = false;
+  var cleanReturn = null;
+  var lastActivity = Date.now();
+  var lastPointer = '';
+  var idleTimer = null;
+  function noteActivity() { lastActivity = Date.now(); }
+  // Un solo temporizador: la actividad solo anota la hora; al vencer se calcula cuánto falta.
+  function armIdle(wait) {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(function () {
+      var left = IDLE_MS - (Date.now() - lastActivity);
+      if (left > 0) { armIdle(left); return; }
+      if (editing || busy || clean || document.hidden) { armIdle(IDLE_MS); return; }
+      setClean(true);
+      armIdle(IDLE_MS);
+    }, wait);
+  }
+  function setClean(value) {
+    noteActivity();
+    clean = value;
+    document.body.classList.toggle('is-clean', value);
+    if (value) {
+      cleanReturn = document.activeElement;
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    } else {
+      var target = cleanReturn && document.body.contains(cleanReturn) ? cleanReturn : document.querySelector('.tile');
+      cleanReturn = null;
+      if (target) target.focus();
+    }
+  }
+  document.addEventListener('mousedown', function () { if (clean) setClean(false); else noteActivity(); });
+  // El puntero del Magic Remote tiembla: solo cuenta si cambió de posición.
+  document.addEventListener('mousemove', function (event) {
+    var where = event.clientX + ',' + event.clientY;
+    if (where === lastPointer) return;
+    lastPointer = where;
+    if (clean) setClean(false); else noteActivity();
+  });
+  document.addEventListener('visibilitychange', noteActivity);
+  armIdle(IDLE_MS);
+
   function openItem(item) {
     if (busy) return;
+    if (item.action === 'personalize') { setEditing(true); return; }
     if (item.action === 'transitions') { openTransitions(item); return; }
     if (!onTV) {
       say('Vista previa: este acceso abrirá ' + item.title + ' cuando se pruebe en la TV.', 6000);
@@ -143,14 +191,51 @@
     if (item && availabilityState(item) === 'missing') {
       focusMessage = missingMessage(item);
       say(focusMessage);
+    } else if (item) {
+      focusMessage = item.title;
+      say(focusMessage, 0, true);
+      document.getElementById('selected-title').textContent = item.title;
     }
   }
+  // El dock de apps puede ser más ancho que la pantalla: se desplaza lo justo para que la tarjeta
+  // enfocada quede entera. offsetLeft/offsetWidth ignoran el transform, así que no hay recálculo circular.
+  var dockShift = 0;
+  var dockPad = 0;
+  function setDockShift(row, value) {
+    if (value === dockShift) return;
+    dockShift = value;
+    var css = value ? 'translate3d(' + -value + 'px,0,0)' : 'none';
+    row.style.webkitTransform = css;
+    row.style.transform = css;
+  }
+  function targetShift(tile) {
+    var row = tile.parentNode;
+    if (!row || row.id !== 'apps-grid' || !row.parentNode) return null;
+    if (!dockPad) dockPad = (parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16) * 1.2;
+    var view = row.parentNode.clientWidth;
+    var left = tile.offsetLeft - dockPad;
+    var right = tile.offsetLeft + tile.offsetWidth + dockPad;
+    var next = dockShift;
+    if (right > dockShift + view) next = right - view;
+    if (left < next) next = Math.max(0, left);
+    return next;
+  }
+  function revealTile(tile) {
+    var next = targetShift(tile);
+    if (next !== null) setDockShift(tile.parentNode, next);
+  }
+  window.addEventListener('resize', function () { dockPad = 0; if (current) revealTile(current); });
+  // Cualquier scroll nativo del escenario (focus/scrollIntoView) rompería el desplazamiento propio.
+  var stageEl = document.querySelector('.stage');
+  if (stageEl) stageEl.addEventListener('scroll', function () { if (stageEl.scrollLeft) stageEl.scrollLeft = 0; });
+
   function showFocus(target) {
     if (!target || target === current) return;
     if (current) current.classList.remove('is-current');
     current = target;
     current.classList.add('is-current');
     if (editing) return;
+    revealTile(target);
     var item = target.dataset && target.dataset.id ? itemByKey(target.dataset.id) : null;
     explainFocus(item);
     setAura(item ? item.color : '#5d7dff');
@@ -177,6 +262,18 @@
     note.setAttribute('aria-hidden', 'true');
     tile.appendChild(note);
     tile.addEventListener('click', function () { openItem(item); });
+    // Magic Remote: un icono cortado por el borde se enfoca (y el dock se corre) tras una breve pausa;
+    // uno ya visible no cambia de foco, así no hay vaivenes al moverse el dock bajo el puntero.
+    var hoverTimer = null;
+    tile.addEventListener('mouseenter', function () {
+      clearTimeout(hoverTimer);
+      hoverTimer = setTimeout(function () {
+        if (editing || document.activeElement === tile) return;
+        var next = targetShift(tile);
+        if (next !== null && next !== dockShift) tile.focus();
+      }, 150);
+    });
+    tile.addEventListener('mouseleave', function () { clearTimeout(hoverTimer); });
     return tile;
   }
 
@@ -184,6 +281,7 @@
     var grids = { app: document.getElementById('apps-grid'), input: document.getElementById('inputs-grid') };
     grids.app.textContent = '';
     grids.input.textContent = '';
+    setDockShift(grids.app, 0);
     items.filter(function (item) { return item.visible; }).forEach(function (item) {
       grids[item.kind].appendChild(tileFor(item));
     });
@@ -222,27 +320,37 @@
       badge.appendChild(logo(item, ''));
       row.appendChild(badge);
       var name = element('span', 'manage-name', item.title);
-      name.appendChild(element('small', '', (item.kind === 'input' ? 'Entrada' : 'Aplicación') + ' · ' + (item.visible ? 'En el inicio' : 'Oculta')));
+      name.appendChild(element('small', ''));
       row.appendChild(name);
 
-      var toggle = managerButton('switch-button', (item.visible ? 'Ocultar ' : 'Mostrar ') + item.title, function () {
+      // Alternar solo repinta esta fila: reconstruir la lista y el dock por cada OK trababa la TV.
+      var state = name.firstChild.nextSibling;
+      var toggle = managerButton('switch-button', '', function () {
         item.visible = !item.visible;
-        save(); render(); renderManager(item.key);
+        save(); paint(); dockStale = true;
       });
       toggle.setAttribute('role', 'switch');
-      toggle.setAttribute('aria-checked', item.visible ? 'true' : 'false');
       toggle.dataset.toggle = item.key;
       var track = element('span', 'switch');
       track.appendChild(element('span', 'switch-knob'));
       toggle.appendChild(track);
-      toggle.appendChild(element('span', 'switch-label', item.visible ? 'Visible' : 'Oculta'));
+      var switchLabel = element('span', 'switch-label');
+      toggle.appendChild(switchLabel);
       row.appendChild(toggle);
+      function paint() {
+        row.className = 'manage-row' + (item.visible ? '' : ' is-hidden');
+        state.textContent = (item.kind === 'input' ? 'Entrada' : 'Aplicación') + ' · ' + (item.visible ? 'En el inicio' : 'Oculta');
+        toggle.setAttribute('aria-label', (item.visible ? 'Ocultar ' : 'Mostrar ') + item.title);
+        toggle.setAttribute('aria-checked', item.visible ? 'true' : 'false');
+        switchLabel.textContent = item.visible ? 'Visible' : 'Oculta';
+      }
+      paint();
 
       var earlier = items.slice(0, index).filter(function (candidate) { return candidate.kind === item.kind; }).pop();
       var move = managerButton('move-button', 'Mover ' + item.title + ' antes', function () {
         var other = items.indexOf(earlier);
         items[other] = item; items[index] = earlier;
-        save(); render(); renderManager(item.key);
+        save(); renderManager(item.key); dockStale = true;
       });
       move.appendChild(element('span', 'chevron'));
       move.disabled = !earlier;
@@ -259,7 +367,7 @@
     var entry = backgrounds ? backgrounds.current() : null;
     var rows = entry ? window.LauncherBackgrounds.sourceDetails(entry) : [];
     rows.concat([
-      ['Fotos', 'Cada día, una selección de paisajes destacados de Wikimedia Commons; sin conexión, las fotos incluidas.'],
+      ['Fotos', 'Cada día, una selección de destinos de viaje de Wikimedia Commons; sin conexión, las fotos incluidas.'],
       ['Clima', 'Open-Meteo'],
       ['Transitions', 'Episodios de la lista oficial de John Digweed en YouTube · Ícono: Bedrock Records (bedrock.org.uk).'],
       ['Luces', 'Lámparas WiZ por la red local, mediante el servicio de luces de la tele.']
@@ -298,8 +406,9 @@
       lastFocusKey = lastFocus && lastFocus.dataset ? lastFocus.dataset.id || null : null;
       renderManager();
       panel.querySelector('button').focus();
-      panel.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      if (!onTV) panel.scrollIntoView({ block: 'center', behavior: 'smooth' });
     } else {
+      if (dockStale) { dockStale = false; render(); }
       // Las tarjetas se regeneran al editar: volver a la misma app aunque su botón sea nuevo.
       var target = lastFocusKey ? document.querySelector('.tile[data-id="' + lastFocusKey + '"]') : null;
       if (!target && lastFocus && document.body.contains(lastFocus)) target = lastFocus;
@@ -313,6 +422,7 @@
   document.getElementById('done-button').addEventListener('click', function () { setEditing(false); });
   document.getElementById('reset-button').addEventListener('click', function () {
     items = defaults.map(function (item) { return Object.assign({}, item, { visible: true }); });
+    if (backgrounds && backgrounds.restoreHidden) backgrounds.restoreHidden();
     save(); render(); document.getElementById('reset-button').focus();
     say('Se restauraron los accesos y el orden inicial.', 5000);
   });
@@ -352,11 +462,13 @@
     if (best) {
       best.focus();
       // El dock de TV ya entra completo: desplazarlo tras focus fuerza otro layout.
-      if (!onTV || editing || !best.classList.contains('tile')) best.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      if (!onTV || (!editing && !best.classList.contains('tile'))) best.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }
   }
   document.addEventListener('keydown', function (event) {
     var key = event.key;
+    noteActivity();
+    if (clean) { event.preventDefault(); setClean(false); return; }
     if (editing && key === 'Tab') {
       var controls = Array.prototype.slice.call(panel.querySelectorAll('button:not([disabled])'));
       var index = controls.indexOf(document.activeElement);
@@ -364,6 +476,11 @@
       else if (!event.shiftKey && index === controls.length - 1) { event.preventDefault(); controls[0].focus(); }
     }
     if (/^Arrow(Left|Right|Up|Down)$/.test(key)) { event.preventDefault(); moveFocus(key); }
+    // Botón rojo del control: descarta el destino de la foto a la vista.
+    if (event.keyCode === 403 && !editing && backgrounds) {
+      var shown = backgrounds.current();
+      if (backgrounds.dislike()) say('Destino descartado' + (shown && shown.place ? ': ' + shown.place : ''), 4000);
+    }
     if (key === 'Escape' || event.keyCode === 461) {
       if (editing) { event.preventDefault(); setEditing(false); }
       else if (onTV && window.webOS && window.webOS.platformBack) window.webOS.platformBack();
@@ -431,7 +548,7 @@
   firstTile.focus();
   showFocus(firstTile);
   if (!onTV) say('Vista previa: probá las flechas, OK (Enter) y Atrás (Escape).', 8000);
-  if (onTV) items.forEach(function (item) {
+  if (onTV) items.filter(function (item) { return !!item.appId; }).forEach(function (item) {
     bridge.isInstalled(item.appId).then(function (result) {
       installed[item.key] = result;
       updateAvailability(item);

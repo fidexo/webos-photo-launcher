@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const root = path.join(__dirname, '..');
-const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8').replace(/\r/g, '');
 const restore = app.slice(app.indexOf('  try {\n    var stored ='), app.indexOf('  function element('));
 
 function upgrade(saved) {
@@ -17,16 +17,12 @@ function upgrade(saved) {
   return Array.from(context.items, item => ({key: item.key, visible: item.visible}));
 }
 
-test('upgrading a saved seven-icon layout adds Homebrew without changing order or hidden choices', () => {
-  for (const keys of [
-    ['youtube', 'spotify', 'nuvio', 'netflix', 'disney', 'transitions', 'hdmi1'],
-    ['hdmi1', 'transitions', 'nuvio', 'youtube', 'disney', 'netflix', 'spotify']
-  ]) {
-    const saved = keys.map(key => ({key, visible: key !== 'netflix' && key !== 'nuvio'}));
-    const updated = upgrade(saved);
-    assert.deepEqual(updated.filter(item => keys.includes(item.key)), saved);
-    assert.deepEqual(updated.filter(item => !keys.includes(item.key)), [{key: 'homebrew', visible: true}]);
-    const hidden = updated.map(item => item.key === 'homebrew' ? {key: item.key, visible: false} : item);
-    assert.deepEqual(upgrade(hidden), hidden, 'reopening keeps the new shortcut hidden if the user hides it');
-  }
+test('upgrading a saved layout keeps order and hidden choices and appends new shortcuts visible', () => {
+  const keys = ['youtube', 'spotify', 'netflix', 'disney'];
+  const saved = keys.map(key => ({key, visible: key !== 'netflix'}));
+  const updated = upgrade(saved);
+  assert.deepEqual(updated.slice(0, keys.length), saved);
+  const added = updated.slice(keys.length);
+  assert.ok(added.length > 0 && added.every(item => item.visible && !keys.includes(item.key)));
+  assert.deepEqual(upgrade(updated), updated, 'reopening is stable');
 });

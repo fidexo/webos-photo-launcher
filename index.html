@@ -7,7 +7,7 @@
   <title>Mi pantalla</title>
   <link rel="preload" href="assets/wallpaper.svg" as="image">
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="lights-panel.css">
+  <link rel="stylesheet" href="apple-tv.css">
 </head>
 <body>
   <div class="stage">
@@ -46,7 +46,7 @@
             </svg>
             <span class="edit-label">Luces</span>
           </button>
-          <button id="edit-button" class="glass glass-pill edit-button" type="button" aria-label="Personalizar">
+          <button id="edit-button" class="glass glass-pill edit-button" type="button" aria-label="Personalizar" hidden>
             <svg class="pill-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M4 7h9M17 7h3M4 17h3M11 17h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               <circle cx="15" cy="7" r="2.4" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -70,6 +70,7 @@
       </header>
 
       <main class="home">
+        <p id="selected-title" class="selected-title" aria-live="polite"></p>
         <section class="dock glass" aria-label="Tus aplicaciones y entradas">
           <div class="dock-frost" aria-hidden="true">
             <canvas class="frost-layer"></canvas>
@@ -201,16 +202,10 @@
   <script src="wallpapers.js"></script>
   <script src="weather-config.js"></script>
   <script src="daily-photos-config.js"></script>
-  <script src="transitions-config.js"></script>
-  <script src="lights-config.js"></script>
   <script src="bridge.js"></script>
   <script src="weather.js"></script>
   <script src="backgrounds.js"></script>
   <script src="daily-photos.js"></script>
-  <script src="transitions.js"></script>
-  <script src="ambient-wallpaper.js"></script>
-  <script src="lights-client.js"></script>
-  <script src="lights-panel.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -36,7 +36,7 @@ function harness(onTV, editing = false) {
   const hidden = button('Control oculto', 'hidden-panel', 50, 100, true);
   const first = button('Visible', 'manager', 0, 0);
   const second = button('Mover', 'manager', 100, 0);
-  vm.runInNewContext(navigation, {document, panel, editing, onTV, window: {}, setEditing() {}});
+  vm.runInNewContext(navigation, {document, panel, editing, onTV, window: {}, setEditing() {}, clean: false, setClean() {}, noteActivity() {}});
   function press(key) { events.keydown({key, preventDefault() {}}); }
   return {document, one, two, lights, edit, hidden, first, second, press};
 }
@@ -56,11 +56,11 @@ test('horizontal TV dock navigation never forces layout, skips disabled icons an
   assert.equal(h.one.visibilityReads + h.two.visibilityReads + h.one.geometryReads + h.two.geometryReads, 0);
 });
 
-test('preview dock and TV manager retain scrolling when moving focus', () => {
+test('preview keeps scrolling when moving focus; the TV manager fits and never scrolls', () => {
   const preview = harness(false); preview.one.focus(); preview.press('ArrowRight');
   assert.equal(preview.document.activeElement, preview.two); assert.equal(preview.two.scrolls, 1);
   const manager = harness(true, true); manager.first.focus(); manager.press('ArrowRight');
-  assert.equal(manager.document.activeElement, manager.second); assert.equal(manager.second.scrolls, 1);
+  assert.equal(manager.document.activeElement, manager.second); assert.equal(manager.second.scrolls, 0);
 });
 
 test('main navigation skips panel controls and keeps Luces and Personalizar reachable', () => {
@@ -84,4 +84,65 @@ test('focus aura does not write full-screen gradients on TV and stays available 
   }
   assert.equal(updates(true), 0);
   assert.ok(updates(false) > 0);
+});
+
+test('dock shifts only as much as needed to keep the focused tile fully visible', () => {
+  const start = source.indexOf('  var dockShift');
+  const end = source.indexOf('  function showFocus', start);
+  const row = {id: 'apps-grid', style: {}, parentNode: {clientWidth: 1000}};
+  const context = {window: {addEventListener() {}, getComputedStyle: () => ({fontSize: '10px'})},
+    document: {documentElement: {}, querySelector: () => null}, current: null};
+  vm.runInNewContext(source.slice(start, end), context);
+  const tile = (index) => ({parentNode: row, offsetLeft: index * 100, offsetWidth: 90});
+  const shift = () => Number(/translate3d\(-?(\d+)/.exec(row.style.transform || 'translate3d(0')[1]);
+  context.revealTile(tile(5)); assert.equal(row.style.transform, undefined, 'visible tile: no movement');
+  context.revealTile(tile(9)); assert.equal(shift(), 990 + 12 - 1000 + 0, 'right edge + padding');
+  const at = shift();
+  context.revealTile(tile(8)); assert.equal(shift(), at, 'tile already visible: no recentering');
+  context.revealTile(tile(0)); assert.equal(row.style.transform, 'none', 'returns to the start');
+});
+
+test('in Solo fondo any key only brings the interface back, without moving focus or going Back', () => {
+  const events = {};
+  const calls = [];
+  const document = { activeElement: null, addEventListener(name, fn) { events[name] = fn; }, querySelectorAll: () => [] };
+  vm.runInNewContext(navigation, { document, panel: {}, editing: false, onTV: true, window: { webOS: { platformBack() { calls.push('back'); } } },
+    setEditing() {}, clean: true, noteActivity() {}, setClean(value) { calls.push('clean:' + value); } });
+  for (const key of ['ArrowRight', 'Enter', 'Escape']) {
+    let prevented = false;
+    events.keydown({ key, keyCode: key === 'Escape' ? 461 : 0, preventDefault() { prevented = true; } });
+    assert.equal(prevented, true);
+  }
+  assert.deepEqual(calls, ['clean:false', 'clean:false', 'clean:false']);
+});
+
+test('Solo fondo starts by itself after the idle time, only when nothing else is going on, and a single timer is reused', () => {
+  const start = source.indexOf('  var IDLE_MS');
+  const end = source.indexOf('  function openItem', start);
+  let now = 1000;
+  const timers = [];
+  const toggles = [];
+  const context = {
+    Date: { now: () => now }, setTimeout(fn, ms) { const timer = { fn, ms }; timers.push(timer); return timer; },
+    clearTimeout(timer) { const at = timers.indexOf(timer); if (at !== -1) timers.splice(at, 1); },
+    document: { hidden: false, activeElement: null, body: { classList: { toggle(name, on) { toggles.push(on); } }, contains: () => false },
+      querySelector: () => null, addEventListener() {} },
+    editing: false, busy: false,
+  };
+  vm.runInNewContext(source.slice(start, end), context);
+  assert.equal(timers.length, 1);
+  const idle = timers[0].ms;
+  assert.ok(idle >= 30000 && idle <= 60000, 'between 30 s and 1 min');
+  now += idle - 5000; context.noteActivity();
+  now += 5000;
+  timers[0].fn();
+  assert.deepEqual(toggles, [], 'activity postponed it');
+  assert.equal(timers.length, 1, 'still a single timer');
+  context.busy = true; now += 5 * idle; timers[0].fn();
+  assert.deepEqual(toggles, [], 'not while launching an app');
+  context.busy = false; context.editing = true; now += 5 * idle; timers[0].fn();
+  assert.deepEqual(toggles, [], 'not while customizing');
+  context.editing = false; now += 5 * idle; timers[0].fn();
+  assert.deepEqual(toggles, [true], 'idle with nothing going on turns it on');
+  assert.equal(context.clean, true);
 });

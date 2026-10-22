@@ -33,7 +33,7 @@ test('credits show author and source host', () => {
   assert.equal(B.creditText({ author: '', source: '' }), '');
 });
 
-function harness(list, failing = [], deferLoads = false, initialList) {
+function harness(list, failing = [], deferLoads = false, initialList, random = () => 0) {
   const state = { now: 0, hidden: false, timers: [], frames: [], events: [], frostChecks: 0, painted: [], shown: [], loads: [], loadOptions: [], pending: [] };
   const storage = { value: null, getItem() { return this.value; }, setItem(key, value) { this.value = value; } };
   const element = () => {
@@ -44,6 +44,7 @@ function harness(list, failing = [], deferLoads = false, initialList) {
   state.layers = [layer(), layer()];
   const slideshow = B.createSlideshow({
     layers: state.layers,
+    random,
     list, initialList,
     fallback: 'assets/wallpaper.svg',
     storage,
@@ -87,7 +88,7 @@ test('a single photo is shown without a rotation timer', () => {
   assert.equal(state.timers.length, 0);
 });
 
-test('rotates every 5 minutes, preloading the next photo after the fade', () => {
+test('rotates every hour, preloading the next photo after the fade', () => {
   const { slideshow, state, storage } = harness([{ src: 'assets/wallpapers/a.jpg' }, { src: 'assets/wallpapers/b.jpg' }, { src: 'assets/wallpapers/c.jpg' }]);
   slideshow.start();
   assert.deepEqual(state.shown, ['assets/wallpapers/a.jpg']);
@@ -128,15 +129,15 @@ test('pauses while hidden and advances on return when the interval elapsed', () 
   state.hidden = true;
   slideshow.visibilityChanged();
   assert.equal(state.rotation().length, 0, 'rotation timer cleared while hidden');
-  state.now += 2 * 60000;
+  state.now += 2000;
   state.hidden = false;
   slideshow.visibilityChanged();
   assert.equal(state.shown.length, 1, 'not due yet');
   assert.equal(state.rotation().length, 0);
-  assert.equal(state.timers.some((timer) => timer.ms === 3 * 60000), true, 'waits the remaining time');
+  assert.equal(state.timers.some((timer) => timer.ms === B.ROTATE_MS - 2000), true, 'waits the remaining time');
   state.hidden = true;
   slideshow.visibilityChanged();
-  state.now += 10 * 60000;
+  state.now += B.ROTATE_MS;
   state.hidden = false;
   slideshow.visibilityChanged();
   assert.deepEqual(state.shown, ['assets/wallpapers/a.jpg', 'assets/wallpapers/b.jpg']);
@@ -152,7 +153,7 @@ test('pauses pending preloads while hidden and starts them again on return', () 
   pendingPreload.fn(); // A callback already queued at the visibility boundary must also pause.
   assert.deepEqual(state.loads, ['assets/wallpapers/a.jpg']);
   state.hidden = false;
-  state.now = 60000;
+  state.now = 1000;
   slideshow.visibilityChanged();
   const resumedPreload = state.timers.find((timer) => timer.ms < B.FADE_MS + 1000);
   assert.ok(resumedPreload, 'preloading is restored without waiting five minutes');
@@ -205,12 +206,12 @@ const remote = (n, extra) => Object.assign({
 }, extra);
 const LOCAL = [{ src: 'assets/wallpapers/a.jpg', author: 'A' }, { src: 'assets/wallpapers/b.jpg', author: 'B' }];
 
-test('cached metadata starts at the stored photo immediately, without loading a local first', () => {
+test('cached metadata starts at a photo other than the last one shown, without loading a local first', () => {
   for (const last of [remote(2).src, 'assets/wallpapers/a.jpg', null]) {
     const { slideshow, state, storage } = harness(LOCAL, [], true, [remote(1), remote(2)]);
     storage.value = last;
     slideshow.start();
-    const expected = last === remote(2).src ? last : remote(1).src;
+    const expected = remote(1).src; // sorteo determinista (random = 0) entre las que no son la última
     assert.deepEqual(state.loads, [expected]);
     assert.equal(state.timers.length, 0, 'no startup fade timer delays the cached request');
     state.pending.shift().done(true);
@@ -218,7 +219,7 @@ test('cached metadata starts at the stored photo immediately, without loading a 
     assert.equal(slideshow.current().author, 'Ana');
     assert.equal(slideshow.current().provider, 'Wikimedia Commons');
     assert.equal(slideshow.current().license, 'CC BY-SA 4.0');
-    assert.equal(slideshow.current().page, last === remote(2).src ? remote(2).page : remote(1).page);
+    assert.equal(slideshow.current().page, remote(1).page);
   }
 });
 
@@ -417,7 +418,7 @@ test('a cached startup timeout immediately loads the credited local base and ign
   fake.window.LAUNCHER_WALLPAPERS = LOCAL;
   fake.window.addEventListener = () => {};
   fake.document = { hidden: false, addEventListener() {} };
-  const slideshow = mounted.mount({ images, frosts: [image(), image()], credit, fallback: 'assets/wallpaper.svg', initialList: [remote(1), remote(2)], onShow: (entry) => shown.push(entry.src) });
+  const slideshow = mounted.mount({ images, frosts: [image(), image()], credit, fallback: 'assets/wallpaper.svg', initialList: [remote(1), remote(2)], random: () => 0, onShow: (entry) => shown.push(entry.src) });
   const lateRemote = images[0].onload;
   assert.equal(timers.length, 1);
   assert.equal(timers[0].ms, 1500);
@@ -497,13 +498,13 @@ test('if no remote photo loads, the local gallery keeps rotating (no SVG, no fla
   const { slideshow, state } = harness(LOCAL, [remote(1).src, remote(2).src]);
   slideshow.start();
   state.fire(state.timers.find((timer) => timer.ms < B.ROTATE_MS)); // precarga b
-  state.now = 60000;
+  state.now = 2000;
   slideshow.replace([remote(1), remote(2)]);
   state.fire(state.timers.find((timer) => timer.ms < B.ROTATE_MS));
   assert.deepEqual(state.shown, ['assets/wallpapers/a.jpg'], 'the visible local photo stayed');
   assert.equal(slideshow.isReplaced(), false);
   assert.equal(slideshow.isFallback(), false);
-  const rotation = state.rotation().concat(state.timers.filter((timer) => timer.ms === B.ROTATE_MS - 60000));
+  const rotation = state.rotation().concat(state.timers.filter((timer) => timer.ms === B.ROTATE_MS - 2000));
   assert.equal(rotation.length, 1, 'rotation resumes with the remaining time');
   state.now = B.ROTATE_MS;
   state.fire(rotation[0]);
@@ -518,7 +519,7 @@ test('a gallery received while hidden waits for the return and does not advance 
   slideshow.replace([remote(1), remote(2)]);
   assert.equal(state.timers.length, 0, 'nothing runs while hidden');
   assert.deepEqual(state.loads, ['assets/wallpapers/a.jpg']);
-  state.now += 10 * 60000;
+  state.now += 1000;
   state.hidden = false;
   slideshow.visibilityChanged();
   assert.deepEqual(state.shown, ['assets/wallpapers/a.jpg'], 'no extra local advance before the new gallery');
@@ -571,4 +572,45 @@ test('a stale load timeout does not clear the handlers of a newer load on the sa
   assert.equal(image.onload, newer, 'the newer handlers survive');
   image.onload();
   assert.deepEqual(results, ['a:false', 'b:true']);
+});
+
+test('credits and sources lead with the place name when there is one', () => {
+  const entry = { src: 'assets/wallpapers/a.jpg', author: 'Ana', source: 'https://commons.wikimedia.org/wiki/File:A.jpg', place: 'Oia, Santorini, Grecia' };
+  assert.equal(B.creditText(entry), 'Oia, Santorini, Grecia · Foto: Ana · commons.wikimedia.org');
+  assert.deepEqual(Array.from(B.sourceDetails(entry)[0]), ['Lugar', 'Oia, Santorini, Grecia']);
+  assert.equal(B.cleanList([entry])[0].place, 'Oia, Santorini, Grecia');
+});
+
+test('the red-button dislike hides the photo on view, shows the next one and refuses to empty the gallery', () => {
+  const { slideshow, state } = harness(LOCAL);
+  slideshow.start();
+  const first = state.shown[0];
+  assert.equal(slideshow.dislike(), true);
+  assert.equal(state.shown.length, 2);
+  assert.notEqual(state.shown[1], first);
+  assert.equal(slideshow.current().src, state.shown[1]);
+  for (let i = 0; i < 10; i += 1) slideshow.dislike();
+  assert.ok(slideshow.current(), 'the last usable photo is never discarded');
+  slideshow.restoreHidden();
+});
+
+test('photos come in random order without repeating until every photo was shown, and never start on the last one', () => {
+  const four = ['a', 'b', 'c', 'd'].map((name) => ({ src: 'assets/wallpapers/' + name + '.jpg', author: name }));
+  const draws = [0.99, 0.5, 0.2, 0.7, 0.1, 0.9, 0.4, 0.3];
+  let n = 0;
+  const { slideshow, state, storage } = harness(four, [], false, undefined, () => draws[n++ % draws.length]);
+  storage.value = 'assets/wallpapers/d.jpg';
+  slideshow.start();
+  assert.notEqual(state.shown[0], 'assets/wallpapers/d.jpg', 'the first photo is never the one shown last time');
+  for (let i = 0; i < 7; i += 1) {
+    state.now += B.ROTATE_MS;
+    const timer = state.timers.find((candidate) => candidate.ms === B.ROTATE_MS);
+    if (timer) state.fire(timer);
+    const preload = state.timers.find((candidate) => candidate.ms < B.ROTATE_MS);
+    if (preload) state.fire(preload);
+  }
+  const firstRound = state.shown.slice(0, 4);
+  assert.equal(new Set(firstRound).size, firstRound.length, 'no photo repeats inside a round');
+  assert.ok(state.shown.length >= 4);
+  for (let i = 1; i < state.shown.length; i += 1) assert.notEqual(state.shown[i], state.shown[i - 1], 'never the same photo twice in a row');
 });

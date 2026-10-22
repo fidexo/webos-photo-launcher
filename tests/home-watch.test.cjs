@@ -113,7 +113,7 @@ test('boot passes literal Luna argv and stops only on explicit acceptance', () =
   const h = harness(['--boot']); const daemon = h.start();
   assert.equal(h.calls.length, 1);
   assert.equal(h.calls[0].command, 'luna-send');
-  assert.deepEqual(h.calls[0].argv, ['-n','1','-f','luna://com.webos.applicationManager/launch','{"id":"com.frxn.mipantalla"}']);
+  assert.deepEqual(h.calls[0].argv, ['-n','1','-f','luna://com.webos.applicationManager/launch','{"id":"com.fidexo.photolauncher"}']);
   assert.equal(h.calls[0].options.timeout, 2500);
   assert.equal(h.calls[0].options.maxBuffer, 8192);
   h.reply(0, '{"returnValue":false}'); h.advance(1999); assert.equal(h.calls.length, 1);

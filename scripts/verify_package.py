@@ -32,17 +32,10 @@ with tarfile.open(fileobj=io.BytesIO(parts['data.tar.gz']), mode='r:gz') as arch
     info = json.load(archive.extractfile(manifest))
     assert info['id'] == expected['id'] and info['version'] == expected['version']
     app_prefix = 'usr/palm/applications/' + info['id'] + '/'
-    service_id = info['id'] + '.lights'
-    service_prefix = 'usr/palm/services/' + service_id + '/'
-    service_files = {'api.js', 'controller.js', 'protocol.js', 'service.js', 'transport.js', 'package.json', 'services.json',
-                     'hyperhdr-rpc.js', 'piccap-probe.js', 'screen-backend.js', 'screen-control.js', 'screen-session.js',
-                     'screen-settings.js', 'screen-store.js', 'home-autostart.sh', 'home-input.js', 'home-watch.js', 'home-power.js'}
-    if (root / 'services' / service_id / 'screen-config.json').is_file():
-        service_files.add('screen-config.json')
+    package_info_path = 'usr/palm/packages/' + info['id'] + '/packageinfo.json'
     checked_app = set()
-    checked_service = set()
     for member in members:
-        if member.name == 'usr/palm/packages/com.frxn.mipantalla/packageinfo.json':
+        if member.name == package_info_path:
             metadata = json.load(archive.extractfile(member))
             assert metadata['id'] == info['id'] and metadata['version'] == info['version']
             continue
@@ -51,16 +44,9 @@ with tarfile.open(fileobj=io.BytesIO(parts['data.tar.gz']), mode='r:gz') as arch
             assert '..' not in pathlib.PurePosixPath(relative).parts
             local = root / 'dist' / relative
             checked_app.add(relative)
-        elif member.name.startswith(service_prefix):
-            relative = member.name[len(service_prefix):]
-            assert relative in service_files, 'Unexpected service file: ' + relative
-            local = root / 'services' / service_id / relative
-            checked_service.add(relative)
         else:
             raise AssertionError('Unexpected package path: ' + member.name)
         assert local.is_file(), 'Unexpected file: ' + member.name
         assert archive.extractfile(member).read() == local.read_bytes(), 'Package differs from build: ' + relative
     assert checked_app == {str(p.relative_to(root / 'dist')).replace('\\', '/') for p in (root / 'dist').rglob('*') if p.is_file()}, 'Missing app files'
-    if (root / 'dist' / 'lights-client.js').is_file():
-        assert checked_service == service_files, 'Missing WiZ service files'
 print(json.dumps({'package': package.name, 'bytes': len(raw), 'files': len(members), 'sha256': hashlib.sha256(raw).hexdigest(), 'matches_dist': True}))
