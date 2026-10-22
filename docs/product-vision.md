@@ -17,7 +17,7 @@ propia. Lo siguiente es una propuesta de producto: no describe funciones ya impl
 - Un acceso configurado no prueba que su app esté instalada. La última limpieza documentada
   no encontró Nuvio ni los paquetes de PicCap/HyperHDR; antes de ofrecerlos hay que revalidarlos.
 
-Fuentes del estado: [rendimiento](performance.md), [Luces](lights.md),
+Fuentes del estado: [rendimiento](performance.md), 
 [limpieza](cleaning.md) y [Home](home-takeover.md).
 
 ## 1. Un dock que siempre abra algo útil

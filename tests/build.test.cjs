@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const root = path.join(__dirname, '..');
-const APP_FILES = ['index.html', 'styles.css', 'apple-tv.css','config.js', 'bridge.js', 'weather.js', 'backgrounds.js', 'daily-photos.js', 'transitions.js', 'ambient-wallpaper.js', 'lights-client.js', 'lights-panel.js', 'lights-panel.css', 'app.js', 'appinfo.json', 'icon.png', 'LICENSE'];
+const APP_FILES = ['index.html', 'styles.css', 'apple-tv.css','config.js', 'bridge.js', 'weather.js', 'backgrounds.js', 'daily-photos.js', 'transitions.js', 'app.js', 'appinfo.json', 'icon.png', 'LICENSE'];
 const FIXTURE_HTML = '<script src="config.js"></script>\n  <script src="wallpapers.js"></script>\n  <script src="weather-config.js"></script>\n  <script src="daily-photos-config.js"></script>\n  <script src="app.js"></script>';
 
 function withFixture(prepare, check) {

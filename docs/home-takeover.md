@@ -134,11 +134,11 @@ Desde la raíz del checkout, sin contactar la TV:
 ```powershell
 npm test
 npm run build
-npm exec --yes --package=@webos-tools/cli@3.2.6 -- ares-package dist services/com.frxn.mipantalla.lights -o artifacts --no-minify
+python scripts/make_ipk.py
 python scripts/verify_package.py
 ```
 
-El verificador compara los archivos del IPK con `dist/` y el directorio del servicio e informa
+El verificador compara los archivos del IPK con `dist/` e informa
 el conteo real y el SHA-256. La verificación original del IPK 0.7.2 tuvo 257 pruebas, 57 archivos,
 18 del servicio y 1.690.292 bytes. La suite posterior del repositorio pasó 269/269, con 12 tests
 de la guardia externa al IPK; el paquete mantiene 57 archivos y 18 del servicio.

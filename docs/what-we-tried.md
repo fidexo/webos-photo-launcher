@@ -278,6 +278,6 @@ captura particular. No se publicaron respaldos privados como si fueran un instal
 La propuesta de «hacerlo todo desde una web» se evaluó, **no se implementó**. Browser-only no
 dispone de SSH raw; SSAP, certificados WSS, CORS/CSP y permisos de red local son límites distintos.
 Se compararon guía web, web + compañero local y CLI plan/apply/restore. El primer prototipo
-recomendado es CLI local para una TV ya emparejada. [Análisis y fuentes](browser-installer.md).
+recomendado es CLI local para una TV ya emparejada.
 Como primer componente se agregó `scripts/privacy-audit.cjs`: diagnóstico con root ya disponible,
 solo lectura de inventario, ajustes y recursos. No instala ni hace cambios de privacidad.

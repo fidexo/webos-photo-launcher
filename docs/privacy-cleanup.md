@@ -201,7 +201,7 @@ Nuestra UI tampoco debe confundirse con una TV desconectada:
   de streaming no pasan a estar controlados por nuestro launcher.
 
 El código está en [weather.js](../weather.js), [daily-photos.js](../daily-photos.js) y el
-[servicio de luces](../services/com.frxn.mipantalla.lights/). No afirmamos ausencia total de
+[servicio de inicio automático](../services/com.frxn.mipantalla.lights/). No afirmamos ausencia total de
 tráfico por revisar esas funciones: para eso hace falta un inventario y una medición de red
 con alcance y duración explícitos. Los respaldos de la TV nunca van en el repo público.
 

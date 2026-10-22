@@ -179,7 +179,7 @@ demuestra 60 FPS al moverse despacio ni sustituye la evaluación con el control 
 Luces se revisó en Brave a 1920×1080 y 1280×720 con un cliente simulado y hasta diez lámparas,
 sin scroll global; flechas y Atrás conservaron el foco. En la TV real mostró las seis lámparas
 guardadas y brillo común del 100 %, sin enviar cambios a las luces. Estado desconocido,
-estado mixto y respuesta parcial tienen pruebas específicas. [Uso](lights.md#panel-074).
+estado mixto y respuesta parcial tienen pruebas específicas.
 
 Pasaron **295/295 pruebas**, build, vista previa y verificación del IPK: **57 archivos**,
 **18 del servicio**, **1.693.138 bytes**. SHA-256:

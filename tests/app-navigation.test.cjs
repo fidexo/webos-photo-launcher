@@ -31,14 +31,13 @@ function harness(onTV, editing = false) {
   }
   const one = button('YouTube', 'dock', 0, 100);
   const two = button('Spotify', 'dock', 100, 100);
-  const lights = button('Luces', 'top', 0, 0);
   const edit = button('Personalizar', 'top', 100, 0);
   const hidden = button('Control oculto', 'hidden-panel', 50, 100, true);
   const first = button('Visible', 'manager', 0, 0);
   const second = button('Mover', 'manager', 100, 0);
   vm.runInNewContext(navigation, {document, panel, editing, onTV, window: {}, setEditing() {}, clean: false, setClean() {}, noteActivity() {}});
   function press(key) { events.keydown({key, preventDefault() {}}); }
-  return {document, one, two, lights, edit, hidden, first, second, press};
+  return {document, one, two, edit, hidden, first, second, press};
 }
 
 test('TV dock arrows focus the next icon without requesting a post-focus scroll', () => {
@@ -63,10 +62,9 @@ test('preview keeps scrolling when moving focus; the TV manager fits and never s
   assert.equal(manager.document.activeElement, manager.second); assert.equal(manager.second.scrolls, 0);
 });
 
-test('main navigation skips panel controls and keeps Luces and Personalizar reachable', () => {
+test('main navigation skips panel controls and keeps Personalizar reachable', () => {
   const h = harness(true); h.one.focus(); h.press('ArrowUp');
-  assert.equal(h.document.activeElement, h.lights);
-  h.press('ArrowRight'); assert.equal(h.document.activeElement, h.edit);
+  assert.equal(h.document.activeElement, h.edit);
   assert.equal(h.hidden.visibilityReads, 0, 'closed panels never enter the main navigation query');
   assert.equal(h.first.visibilityReads, 0, 'manager controls belong only to its own navigation scope');
 });
