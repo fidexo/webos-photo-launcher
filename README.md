@@ -36,7 +36,7 @@ El clima aparece como "no disponible" hasta que armes tu propio paquete con `wea
 
 ### Uso rápido
 ```bash
-npm test                    # Node 18+; 408 tests (1 omitido)
+npm test                    # Node 18+; 205 tests (1 omitido)
 npm run build               # genera dist/
 python scripts/make_ipk.py  # genera artifacts/<id>_<versión>_all.ipk
 export TV_HOST=192.168.1.50 TV_KEY=~/.ssh/mi_clave     # IP de la TV y clave SSH de root

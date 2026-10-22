@@ -1,7 +1,7 @@
 # Lo que probamos, lo que falló y por qué cambiamos
 
 Bitácora técnica del proyecto. Está ordenada por tema, no por hora. Cada punto dice qué pasó y
-cómo quedó en el código. Las etiquetas de estado son las del [tutorial](tutorial.md).
+cómo quedó en el código. Las etiquetas de estado son las del [tutorial](upstream/tutorial.md).
 
 ## La pregunta inicial
 
@@ -135,7 +135,7 @@ Todas las llamadas Luna tienen timeout de 7 s y no se reintentan solas.
 
 ## YouTube: abrir un video puntual
 
-Para el acceso a Transitions (ver [roadmap.md](roadmap.md)) necesitábamos que YouTube abriera
+Para el acceso a Transitions (ver [roadmap.md](upstream/roadmap.md)) necesitábamos que YouTube abriera
 **un episodio específico**, no solo la app. Lo probamos en la TV real con `ares-launch`.
 
 **Intento 1: `contentId` (formato de Connect SDK).**
@@ -211,7 +211,7 @@ Chromium 68), `appId` `space.nuvio.webos`.
 - **No verificamos login ni reproducción.**
 - El paquete incluye su servicio acompañante; no hace falta otro backend.
 
-Este repo no redistribuye el IPK. Link al release oficial en el [tutorial](tutorial.md#9-vista-previa-y-siguientes-pasos).
+Este repo no redistribuye el IPK. Link al release oficial en el [tutorial](upstream/tutorial.md#9-vista-previa-y-siguientes-pasos).
 La instalación histórica no acredita que Nuvio siga instalado en el inventario actual.
 
 ## Empaquetado
@@ -225,7 +225,7 @@ La instalación histórica no acredita que Nuvio siga instalado en el inventario
 
 - **Root.** En la etapa 0.4 se dejó como decisión aparte. Después se ejecutó para 0.6 y quedó
   persistente con HBC; ver [root-and-home.md](root-and-home.md) y
-  [roadmap.md](roadmap.md#entregado).
+  [roadmap.md](upstream/roadmap.md#entregado).
 - **Reemplazar el botón Home o arrancar solo al prender.** Sin root no había un mecanismo
   verificado para webOS 5. Después se instaló la fase 1 y finalmente Home nativo en 0.7.2;
   los casos físicos confirmados y los pendientes están en [home-takeover.md](home-takeover.md).

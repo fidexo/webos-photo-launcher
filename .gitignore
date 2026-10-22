@@ -10,6 +10,4 @@ artifacts/
 *.epk
 __pycache__/
 weather-config.js
-lights-config.js
-services/com.frxn.mipantalla.lights/screen-config.json
 versions/

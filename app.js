@@ -378,8 +378,7 @@
     rows.concat([
       ['Fotos', 'Cada día, una selección de destinos de viaje de Wikimedia Commons; sin conexión, las fotos incluidas.'],
       ['Clima', 'Open-Meteo'],
-      ['Transitions', 'Episodios de la lista oficial de John Digweed en YouTube · Ícono: Bedrock Records (bedrock.org.uk).'],
-      ['Luces', 'Lámparas WiZ por la red local, mediante el servicio de luces de la tele.']
+      ['Transitions', 'Episodios de la lista oficial de John Digweed en YouTube · Ícono: Bedrock Records (bedrock.org.uk).']
     ]).forEach(function (pair) {
       var row = element('p', 'source-row');
       row.appendChild(element('span', 'source-label', pair[0]));
@@ -524,31 +523,10 @@
       initialList: initialPhotos,
       onShow: function () {
         if (sourcesOpen) renderSources();
-        if (window.LAUNCHER_LIGHTS_CLIENT && window.LAUNCHER_LIGHTS_CLIENT.refreshAmbient) window.LAUNCHER_LIGHTS_CLIENT.refreshAmbient();
       }
     });
   }
   if (window.LauncherWeather) weather = window.LauncherWeather.mount(document.getElementById('weather'), window.LAUNCHER_WEATHER);
-  // Luces WiZ: el cliente del servicio (window.LAUNCHER_LIGHTS_CLIENT) se busca al abrir el panel;
-  // sin cliente, el panel explica que el control no está instalado. Sin módulo, el botón sigue oculto.
-  if (window.createLightsClient) {
-    window.LAUNCHER_LIGHTS_CLIENT = window.createLightsClient(window.webOS, onTV, {
-      source: function () { var entry = backgrounds ? backgrounds.current() : null; return entry && entry.src || null; },
-      onAmbientError: function (error) { say('Luces: ' + error.message,8000); }
-    });
-    document.addEventListener('visibilitychange',function () {
-      if (window.LAUNCHER_LIGHTS_CLIENT.visibilityChanged) window.LAUNCHER_LIGHTS_CLIENT.visibilityChanged();
-    });
-  }
-  if (window.LauncherLights) {
-    window.LauncherLights.mount({
-      host: document.getElementById('lights-panel'),
-      button: document.getElementById('lights-button'),
-      client: function () { return window.LAUNCHER_LIGHTS_CLIENT || null; },
-      initialIds: window.LAUNCHER_LIGHTS && window.LAUNCHER_LIGHTS.selectedIds,
-      say: say
-    });
-  }
   setInterval(function () {
     updateClock();
     if (weather) weather.tick(); // reetiqueta un dato que envejece aunque no haya red

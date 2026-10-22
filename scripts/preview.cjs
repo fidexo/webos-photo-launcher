@@ -27,10 +27,9 @@ function build(htmlClass) {
   html = html.replace('<html lang="es">', '<html lang="es" class="' + htmlClass + '">');
   html = html.replace('<link rel="stylesheet" href="styles.css">', () => '<style>\n' + inlineAssets(read('styles.css')) + '</style>');
   html = html.replace('<link rel="stylesheet" href="apple-tv.css">', () => '<style>\n' + inlineAssets(read('apple-tv.css')) + '</style>');
-  html = html.replace('<link rel="stylesheet" href="lights-panel.css">', () => '<style>\n' + inlineAssets(read('lights-panel.css')) + '</style>');
   // Las capturas automáticas deben mostrar los siete accesos y el fondo desde el primer cuadro.
   html = html.replace('</head>', '<style>.is-preview .tile{-webkit-animation:none;animation:none}.is-preview .aura,.is-preview .wallpaper-layer,.is-preview .frost-layer{transition:none}</style></head>');
-  for (const file of ['config.js', 'wallpapers.js', 'weather-config.js', 'daily-photos-config.js', 'transitions-config.js', 'lights-config.js', 'bridge.js', 'weather.js', 'backgrounds.js', 'daily-photos.js', 'transitions.js', 'ambient-wallpaper.js', 'lights-client.js', 'lights-panel.js', 'app.js']) {
+  for (const file of ['config.js', 'wallpapers.js', 'weather-config.js', 'daily-photos-config.js', 'transitions-config.js', 'bridge.js', 'weather.js', 'backgrounds.js', 'daily-photos.js', 'transitions.js', 'ambient-wallpaper.js', 'app.js']) {
     const tag = '<script src="' + file + '"></script>';
     if (fs.existsSync(path.join(root, file))) html = html.replace(tag, () => script(file));
     else html = html.replace(new RegExp('\\s*' + tag.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')), '');
