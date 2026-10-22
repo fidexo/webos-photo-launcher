@@ -36,12 +36,18 @@ npm test                    # Node 18+; 408 tests (1 omitido)
 npm run build               # genera dist/
 python scripts/make_ipk.py  # genera artifacts/<id>_<versión>_all.ipk
 export TV_HOST=192.168.1.50 TV_KEY=~/.ssh/mi_clave     # IP de la TV y clave SSH de root
-sh scripts/tv-install.sh artifacts/com.fidexo.photolauncher_1.8.0_all.ipk
+sh scripts/fetch-tv-icons.sh  # copia desde tu TV los íconos oficiales de las apps (antes del build)
+sh scripts/tv-install.sh artifacts/com.fidexo.photolauncher_1.9.0_all.ipk
 sh scripts/tv-home.sh status | mipantalla | lg          # a qué app llama el botón Home
 sh scripts/tv-privacy.sh status | apply | remove        # bloqueo de dominios (opcional)
 ```
 Para **volver atrás**: `tv-install.sh` con un `.ipk` anterior (bajar de versión no está probado), `tv-home.sh lg`
 y `tv-privacy.sh remove`. Copiá `weather-config.example.js` a `weather-config.js` y poné tu ciudad.
+
+### Íconos oficiales
+Los íconos de Netflix, YouTube, etc. **no están en este repositorio** (son marcas de sus dueños). `scripts/fetch-tv-icons.sh` los copia
+desde tu propia TV (cada app trae el suyo) a `assets/logos/tv/`, y el build los incluye en tu paquete. Sin ellos, cada app se muestra
+como una tarjeta de color con su nombre. **No publiques el `.ipk` ya armado**, porque contiene esos íconos.
 
 ### Personalizar
 - Apps: `config.js` (IDs de apps verificados en la TV con `tv-scripts/query-user-apps.sh`).
@@ -92,12 +98,18 @@ remote or the Magic Remote.
 ```bash
 npm test && npm run build && python scripts/make_ipk.py
 export TV_HOST=192.168.1.50 TV_KEY=~/.ssh/my_key
-sh scripts/tv-install.sh artifacts/com.fidexo.photolauncher_1.8.0_all.ipk
+sh scripts/fetch-tv-icons.sh   # official app icons, copied from your own TV (before the build)
+sh scripts/tv-install.sh artifacts/com.fidexo.photolauncher_1.9.0_all.ipk
 sh scripts/tv-home.sh status | mipantalla | lg
 sh scripts/tv-privacy.sh status | apply | remove
 ```
 To roll back: reinstall an older `.ipk` (downgrades are untested), `tv-home.sh lg`, `tv-privacy.sh remove`.
 Copy `weather-config.example.js` to `weather-config.js` with your city.
+
+### Official icons
+App icons (Netflix, YouTube, …) are **not in this repo** (trademarks). `scripts/fetch-tv-icons.sh` copies them from your own TV to
+`assets/logos/tv/` and the build bundles them into your package; without them each app is a coloured card with its name.
+**Do not publish the built `.ipk`**, it contains those icons.
 
 ### Known limits
 Only verified on one TV. Performance was judged by feel, not benchmarks. Domain blocking has no measured benefit.

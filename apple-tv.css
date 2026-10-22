@@ -226,7 +226,7 @@ html:not(.force-fallback) .weather {
   width: 100%;
   height: 100%;
   border-radius: 1.15rem;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .tile[data-id="personalize"] .tile-logo,
@@ -278,22 +278,6 @@ html:not(.force-fallback) .weather {
   opacity: 1;
 }
 
-.tile[data-id="max"] {
-  background: linear-gradient(135deg, #3c22d8, #04178b);
-}
-
-.tile[data-id="prime"] {
-  background: linear-gradient(145deg, #1673ff, #073eaf);
-}
-
-.tile[data-id="movistar"] {
-  background: linear-gradient(145deg, #07d4d2, #0569cf);
-}
-
-.tile[data-id="disney"] {
-  background: linear-gradient(145deg, #173e9c, #071a4b);
-}
-
 .tile[data-id="personalize"] {
   background: rgba(25,27,34,.82);
 }
@@ -324,28 +308,39 @@ html:not(.force-fallback) .weather {
   pointer-events: none;
 }
 
-.tile[data-id="netflix"] { background: #080808; }
-.tile[data-id="max"] { background: linear-gradient(145deg, #7047eb, #38219b); }
-.tile[data-id="movistar"] { background: #f5f8fb; }
-.tile[data-id="youtube"] { background: #f7f7f7; }
+/* Íconos oficiales de cada app, leídos de la propia TV (scripts/fetch-tv-icons.sh): cuadrado completo, centrado
+   sobre el mismo color de fondo que trae cada ícono, así la tarjeta ancha queda sin costuras. */
+.tile[data-id="netflix"] { background: #fff; }
+.tile[data-id="max"] { background: #00030c; }
+.tile[data-id="prime"] { background: #0578ff; }
+.tile[data-id="movistar"] { background: #019df4; }
+.tile[data-id="youtube"] { background: #fff; }
+.tile[data-id="disney"] { background: #054553; }
+.tile[data-id="apple-tv"] { background: #000; }
+.tile[data-id="spotify"] { background: #191414; }
 
-.tile[data-id="netflix"] .tile-logo,
-.tile[data-id="max"] .tile-logo,
-.tile[data-id="movistar"] .tile-logo,
-.tile[data-id="youtube"] .tile-logo {
+/* Sin el ícono de la TV (repositorio recién clonado): tarjeta de color con el nombre. */
+.tile.is-generic { background: var(--tile-color, #444b5a); }
+.tile-name {
+  position: absolute;
   z-index: 1;
-  top: 24%;
-  left: 24%;
-  width: 52%;
-  height: 52%;
-  border-radius: 0;
-  object-fit: contain;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  padding: .6rem;
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 0 .1rem .5rem rgba(0,0,0,.45);
 }
-
-.tile[data-id="netflix"] .tile-logo { top: 20%; left: 37%; width: 26%; height: 60%; }
-.tile[data-id="max"] .tile-logo { -webkit-filter: invert(1); filter: invert(1); }
-.tile[data-id="movistar"] .tile-logo { top: 21%; left: 32%; width: 36%; height: 58%; }
-.tile[data-id="youtube"] .tile-logo { top: 22%; left: 31%; width: 38%; height: 56%; }
 
 .weather-condition { display: none; }
 .weather-condition:after { content: none; }

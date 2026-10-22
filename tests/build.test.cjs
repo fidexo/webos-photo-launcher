@@ -102,6 +102,7 @@ test('every asset referenced by the app exists locally', () => {
   assert.ok(references.length >= 8, 'fallback wallpaper and seven marks are referenced');
   for (const reference of references) {
     assert.match(reference, /\.(?:svg|jpe?g|webp|png)$/);
+    if (reference.startsWith('assets/logos/tv/')) continue; // íconos de la TV: los trae scripts/fetch-tv-icons.sh, no están en el repo
     assert.equal(fs.statSync(path.join(root, reference)).isFile(), true, reference);
   }
   const config = fs.readFileSync(path.join(root, 'config.js'), 'utf8');

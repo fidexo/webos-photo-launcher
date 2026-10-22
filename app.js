@@ -73,6 +73,8 @@
     image.src = item.logo;
     image.alt = '';
     image.setAttribute('draggable', 'false');
+    // Sin el archivo del ícono no se muestra una imagen rota.
+    image.addEventListener('error', function () { image.style.visibility = 'hidden'; });
     return image;
   }
   function itemByKey(key) {
@@ -255,7 +257,14 @@
     tile.appendChild(element('span', 'tile-glow'));
     var glass = element('span', 'tile-glass');
     glass.appendChild(element('span', 'tile-tint'));
-    glass.appendChild(logo(item, 'tile-logo'));
+    var icon = logo(item, 'tile-logo');
+    // Ícono ausente (repo recién clonado sin fetch-tv-icons.sh): tarjeta de color con el nombre de la app.
+    icon.addEventListener('error', function () {
+      if (icon.parentNode !== glass) return;
+      tile.classList.add('is-generic');
+      glass.replaceChild(element('span', 'tile-name', item.title), icon);
+    });
+    glass.appendChild(icon);
     glass.appendChild(element('span', 'tile-ring'));
     tile.appendChild(glass);
     var note = element('span', 'tile-note', 'No encontrada');

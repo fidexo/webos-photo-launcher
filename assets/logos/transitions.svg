@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
-  <!-- Bedrock Records: símbolo B del SVG publicado en https://bedrock.org.uk/.
-       Geometría original; centrado y escalado para el dock. Marca de su titular. -->
-  <g transform="translate(10.8 10.8) scale(2.36)">
-    <path fill-rule="evenodd" clip-rule="evenodd" fill="#fff" d="M0,21C0,9.5,9.3,0.2,20.8,0.2c11.5,0,20.8,9.3,20.8,20.8 s-9.3,20.8-20.8,20.8C9.3,41.7,0,32.4,0,21z M21.3,33.4h1c4.1,0,7.4-2.6,7.4-6.7c0-2.8-1-4.6-3.4-5.9c1.6-1,2.4-2.6,2.4-4.7 c0-4.1-3.1-6.6-7.6-6.6l-1.7,0v2.9l1.9,0c2.3,0,4.2,1.3,4.2,3.8c0,1.9-1.4,3.6-4.3,3.6h-1.9v2.9h2.5c3,0,4.7,1.3,4.7,3.9 c0,2.4-1.4,3.9-4.7,3.9c-2.9,0-4.6-1.8-4.6-4.6V9.5h-3.2v16.6C14.1,29.9,17,33.4,21.3,33.4z"/>
-  </g>
-</svg>
